@@ -1,13 +1,28 @@
 package elc.florian.mcity;
 
+import elc.florian.mcity.client.Camera;
+import elc.florian.mcity.client.Keybindings;
+import elc.florian.mcity.item.ModItem;
+import elc.florian.mcity.item.ModItemGroups;
 import net.fabricmc.api.ModInitializer;
 
+import net.fabricmc.fabric.api.client.keybinding.FabricKeyBinding;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
+import net.minecraft.util.math.Vec3d;
+import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
 
 public class MCity implements ModInitializer {
 	public static final String MOD_ID = "mcity";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+	public static ArrayList<KeyBinding> keyBinding = new ArrayList<>();
+	public static boolean detached = false;
+	public static Camera cam = new Camera(new Vec3d(0.0, 100.0, 0.0));
 
 	@Override
 	public void onInitialize() {
@@ -16,5 +31,10 @@ public class MCity implements ModInitializer {
 		// Proceed with mild caution.
 
 		LOGGER.info("Hello Fabric world!");
+
+		ModItemGroups.registerItemGroups();
+		ModItem.registerModItems();
+
+		Keybindings.registerKeybindings();
 	}
 }
