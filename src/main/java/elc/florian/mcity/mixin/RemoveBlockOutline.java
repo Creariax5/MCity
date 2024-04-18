@@ -13,7 +13,7 @@ public abstract class RemoveBlockOutline {
     @Inject(at=@At("TAIL"), method = "shouldRenderBlockOutline", cancellable = true)
     public void renderOutline(CallbackInfoReturnable<Boolean> cir) {
         if (MCity.detached) {
-            cir.setReturnValue(false);
+            cir.setReturnValue(true);
         } else {
             cir.setReturnValue(true);
         }

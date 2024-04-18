@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GameRenderer.class)
 public class RayCastMouse {
     @Inject(at = @At("HEAD"), method = "updateTargetedEntity")
-    private void onOnMouseScroll(float tickDelta, CallbackInfo ci)
+    private void rayCast(float tickDelta, CallbackInfo ci)
     {
         if (MCity.detached) {
 

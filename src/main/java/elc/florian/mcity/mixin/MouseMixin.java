@@ -1,6 +1,7 @@
 package elc.florian.mcity.mixin;
 
 import elc.florian.mcity.MCity;
+import elc.florian.mcity.client.CustomRayCast;
 import elc.florian.mcity.client.Zoom;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
@@ -38,6 +39,11 @@ public class MouseMixin {
                 MCity.newDeplace = true;
                 return;
             }
+            if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+                CustomRayCast.throwRay();
+                return;
+            }
+
         }
     }
     @Shadow
