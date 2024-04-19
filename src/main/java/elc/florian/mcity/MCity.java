@@ -22,6 +22,8 @@ public class MCity implements ModInitializer {
 
 	public static double lastX;
 	public static double lastY;
+	public static double mouseX;
+	public static double mouseY;
 	public static boolean newDeplace;
 	public static boolean mouseMoving;
 

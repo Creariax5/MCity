@@ -13,7 +13,7 @@ public class RendererMixin {
     @ModifyVariable(method = "render", at = @At(value = "STORE", ordinal = 0))
     private HitResult injected(HitResult hit) {
         if (MCity.detached) {
-            return CustomRayCast.throwRay();
+            return CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
         } else {
             return hit;
         }

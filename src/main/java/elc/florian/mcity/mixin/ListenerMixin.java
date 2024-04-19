@@ -17,6 +17,8 @@ public interface ListenerMixin extends Navigable {
         if (!MCity.detached) {
             return;
         }
+        MCity.mouseX = x;
+        MCity.mouseY = y;
 
         if (Zoom.mouseAtBorder(x, y)) {
             Zoom.setX((float) (x - MinecraftClient.getInstance().getWindow().getWidth() /4));

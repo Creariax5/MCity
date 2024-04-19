@@ -24,7 +24,11 @@ public class Zoom {
         Vec3d cam = MCity.cam.getPos();
         Vec3d dir = MCity.cam.getDir();
 
-        speed = speed * (cam.getY()-ground)/slowing;
+        Camera newCam = new Camera(MCity.cam);
+        newCam.setPitch(90);
+        ground = (int) CustomRayCast.throwRayToCenter().getPos().y;
+
+        speed = speed * (cam.getY()-0)/slowing;
 
         Timer timer = new Timer();
 
@@ -44,7 +48,7 @@ public class Zoom {
                     return;
 
                 }
-                if (deplacement.y<ground+30 && finalVertical > 0) {
+                if (deplacement.y<ground+3 && finalVertical > 0) {
                     MCity.cam.setSpeed(0);
                     MCity.cam.setZooming(false);
                     timer.cancel();

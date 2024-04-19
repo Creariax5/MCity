@@ -12,6 +12,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
+import org.joml.Vector3f;
 
 public class CustomRayCast {
     protected static Vec3d getRotationVector(float pitch, float yaw) {
@@ -29,15 +30,66 @@ public class CustomRayCast {
         Vec3d vec3d3 = vec3d.add(vec3d2.x * maxDistance, vec3d2.y * maxDistance, vec3d2.z * maxDistance);
         return entity.getWorld().raycast(new RaycastContext(vec3d, vec3d3, RaycastContext.ShapeType.OUTLINE, includeFluids ? RaycastContext.FluidHandling.ANY : RaycastContext.FluidHandling.NONE, entity));
     }
-    public static HitResult throwRay() {
+    public static HitResult throwRayToCenter() {
         MinecraftClient client = MinecraftClient.getInstance();
 
         int maxReach = 1000; //The farthest target the cameraEntity can detect
         boolean includeFluids = false; //Whether to detect fluids as blocks
 
-        //HitResult hit = client.cameraEntity.raycast(maxReach, tickDelta, includeFluids);
         assert client.cameraEntity != null;
         HitResult hit = raycast(MCity.cam, client.cameraEntity, maxReach, includeFluids);
+
+        switch(hit.getType()) {
+            case MISS:
+                //nothing near enough
+                break;
+            case BLOCK:
+                BlockHitResult blockHit = (BlockHitResult) hit;
+                BlockPos blockPos = blockHit.getBlockPos();
+                BlockState blockState = client.world.getBlockState(blockPos);
+                Block block = blockState.getBlock();
+                break;
+            case ENTITY:
+                EntityHitResult entityHit = (EntityHitResult) hit;
+                Entity entity = entityHit.getEntity();
+                break;
+        }
+        return hit;
+
+    }
+
+    public static Camera newRotCam(MinecraftClient client, int x, int y) {
+        int width = client.getWindow().getScaledWidth();
+        int height = client.getWindow().getScaledHeight();
+        double fov = client.options.getFov().getValue();
+        double angleSize = fov/height;
+
+        float horizontalRotation = (float) ((x - width/2f) * angleSize);
+        float verticalRotation = (float) ((y - height/2f) * angleSize);
+
+        Camera newCam = new Camera(MCity.cam);
+
+        newCam.setPitchMax(10000);
+        newCam.setPitchMin(-10000);
+        newCam.setYaw(newCam.getYaw() + horizontalRotation);
+        newCam.setPitch(newCam.getPitch() + verticalRotation);
+
+        newCam.updateDir();
+
+        return newCam;
+    }
+
+    public static HitResult throwRay(int x, int y) {
+        MinecraftClient client = MinecraftClient.getInstance();
+
+        int maxReach = 1000; //The farthest target the cameraEntity can detect
+        boolean includeFluids = false; //Whether to detect fluids as blocks
+
+        Camera newCam = newRotCam(client, x, y);
+
+        assert client.cameraEntity != null;
+        //HitResult hit = raycast(MCity.cam, client.cameraEntity, maxReach, includeFluids);
+        HitResult hit = raycast(newCam, client.cameraEntity, maxReach, includeFluids);
 
         switch(hit.getType()) {
             case MISS:

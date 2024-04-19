@@ -39,10 +39,6 @@ public class MouseMixin {
                 MCity.newDeplace = true;
                 return;
             }
-            if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
-                CustomRayCast.throwRay();
-                return;
-            }
 
         }
     }

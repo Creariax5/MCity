@@ -75,6 +75,14 @@ public class Camera {
         this.speed = speed;
     }
 
+    public void setPitchMin(int pitchMin) {
+        this.pitchMin = pitchMin;
+    }
+
+    public void setPitchMax(int pitchMax) {
+        this.pitchMax = pitchMax;
+    }
+
     public void updateDir() {
         double y = -Math.sin(pitch);
         xz = abs(Math.cos(pitch));
@@ -95,6 +103,18 @@ public class Camera {
 
         this.zooming = false;
         this.speed = 0;
+    }
+
+    public Camera(Camera camera) {
+        this.pos = camera.pos;
+        this.xz = camera.xz;
+        this.dir = camera.dir;
+        this.pitch = camera.pitch;
+        this.yaw = camera.yaw;
+        this.zooming = camera.zooming;
+        this.speed = camera.speed;
+        this.pitchMin = camera.pitchMin;
+        this.pitchMax = camera.pitchMax;
     }
 
 }
