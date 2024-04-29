@@ -12,7 +12,11 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.joml.Vector3fc;
+
+import static java.lang.Math.toRadians;
 
 public class CustomRayCast {
     protected static Vec3d getRotationVector(float pitch, float yaw) {
@@ -25,10 +29,10 @@ public class CustomRayCast {
         return new Vec3d(i * j, -k, h * j);
     }
     public static HitResult raycast(Camera camera, Entity entity, int maxDistance, boolean includeFluids) {
-        Vec3d vec3d = camera.getPos();
-        Vec3d vec3d2 = getRotationVector(camera.getPitch(), camera.getYaw());
-        Vec3d vec3d3 = vec3d.add(vec3d2.x * maxDistance, vec3d2.y * maxDistance, vec3d2.z * maxDistance);
-        return entity.getWorld().raycast(new RaycastContext(vec3d, vec3d3, RaycastContext.ShapeType.OUTLINE, includeFluids ? RaycastContext.FluidHandling.ANY : RaycastContext.FluidHandling.NONE, entity));
+        Vec3d pos = camera.getPos();
+        Vec3d dir = camera.getDir();
+        Vec3d end = pos.add(dir.x * maxDistance, dir.y * maxDistance, dir.z * maxDistance);
+        return entity.getWorld().raycast(new RaycastContext(pos, end, RaycastContext.ShapeType.OUTLINE, includeFluids ? RaycastContext.FluidHandling.ANY : RaycastContext.FluidHandling.NONE, entity));
     }
     public static HitResult throwRayToCenter() {
         MinecraftClient client = MinecraftClient.getInstance();
@@ -58,25 +62,35 @@ public class CustomRayCast {
 
     }
 
-    public static Camera newRotCam(MinecraftClient client, int x, int y) {
+    public static Vec3d newRotCam(MinecraftClient client, int x, int y) {
         int width = client.getWindow().getScaledWidth();
         int height = client.getWindow().getScaledHeight();
         double fov = client.options.getFov().getValue();
         double angleSize = fov/height;
 
-        float horizontalRotation = (float) ((x - width/2f) * angleSize);
-        float verticalRotation = (float) ((y - height/2f) * angleSize);
+        //rot vec things
+        Vector3f verticalRotationAxis = new Vector3f(MCity.cam.getDir().toVector3f());
+        verticalRotationAxis.cross(new Vector3f(0, 1, 0));
+        verticalRotationAxis.normalize();
 
-        Camera newCam = new Camera(MCity.cam);
+        Vector3f horizontalRotationAxis = new Vector3f(MCity.cam.getDir().toVector3f());
+        horizontalRotationAxis.cross(verticalRotationAxis);
+        horizontalRotationAxis.normalize();
 
-        newCam.setPitchMax(10000);
-        newCam.setPitchMin(-10000);
-        newCam.setYaw(newCam.getYaw() + horizontalRotation);
-        newCam.setPitch(newCam.getPitch() + verticalRotation);
+        verticalRotationAxis = new Vector3f(MCity.cam.getDir().toVector3f());
+        verticalRotationAxis.cross(horizontalRotationAxis);
+        //rot vec things
 
-        newCam.updateDir();
+        //quaternions things
+        float horizontalRotation = (float) toRadians((x - width/2f) * angleSize);
+        float verticalRotation = (float) toRadians((y - height/2f) * angleSize);
 
-        return newCam;
+        final Vector3f temp2 = new Vector3f(MCity.cam.getDir().toVector3f());
+        temp2.rotate((new Quaternionf()).setAngleAxis(verticalRotation, verticalRotationAxis.x, verticalRotationAxis.y, verticalRotationAxis.z));
+        temp2.rotate((new Quaternionf()).setAngleAxis(horizontalRotation, horizontalRotationAxis.x, horizontalRotationAxis.y, horizontalRotationAxis.z));
+        //quaternions things
+
+        return new Vec3d(temp2);
     }
 
     public static HitResult throwRay(int x, int y) {
@@ -85,10 +99,10 @@ public class CustomRayCast {
         int maxReach = 1000; //The farthest target the cameraEntity can detect
         boolean includeFluids = false; //Whether to detect fluids as blocks
 
-        Camera newCam = newRotCam(client, x, y);
+        Camera newCam = new Camera(MCity.cam);
+        newCam.setDir(newRotCam(client, x, y));
 
         assert client.cameraEntity != null;
-        //HitResult hit = raycast(MCity.cam, client.cameraEntity, maxReach, includeFluids);
         HitResult hit = raycast(newCam, client.cameraEntity, maxReach, includeFluids);
 
         switch(hit.getType()) {

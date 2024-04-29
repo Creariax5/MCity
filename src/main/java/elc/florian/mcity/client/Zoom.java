@@ -87,7 +87,7 @@ public class Zoom {
         Vec2f mouseDir = new Vec2f(x, y).normalize();
         mouseDir = Tools.rotateY(mouseDir, toRadians(MCity.cam.getYaw()));
         Vec3d pos = MCity.cam.getPos();
-        mouseDir = mouseDir.multiply((float) ((pos.getY()-ground)/60));
+        mouseDir = mouseDir.multiply((float) ((pos.getY()-0)/60));
 
         Vec2f finalMouseDir = mouseDir;
         timer.schedule(new TimerTask() {

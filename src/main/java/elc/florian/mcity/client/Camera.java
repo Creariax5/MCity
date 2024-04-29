@@ -25,6 +25,8 @@ public class Camera {
 
     public void setDir(Vec3d dir) {
         this.dir = dir;
+        this.pitch = (float) (-Math.asin(dir.y) * (180 / Math.PI));
+        this.yaw = (float) (-Math.atan2(dir.x, dir.z) * 180.0F / Math.PI);;
     }
 
     public Vec3d getPos() {

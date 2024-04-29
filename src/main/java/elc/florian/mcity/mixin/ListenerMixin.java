@@ -1,10 +1,13 @@
 package elc.florian.mcity.mixin;
 
 import elc.florian.mcity.MCity;
+import elc.florian.mcity.client.Camera;
+import elc.florian.mcity.client.CustomRayCast;
 import elc.florian.mcity.client.Zoom;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.navigation.Navigable;
+import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,6 +26,19 @@ public interface ListenerMixin extends Navigable {
         if (Zoom.mouseAtBorder(x, y)) {
             Zoom.setX((float) (x - MinecraftClient.getInstance().getWindow().getWidth() /4));
             Zoom.setY((float) (y - MinecraftClient.getInstance().getWindow().getHeight() /4));
+
+            Camera newCam = new Camera(MCity.cam);
+            newCam.setPitch(90);
+            int ground = (int) CustomRayCast.throwRayToCenter().getPos().y;
+
+            while (ground + 2 >= newCam.getPos().getY()) {
+                newCam.setPos(new Vec3d(newCam.getPos().getX(), newCam.getPos().getY() + 1, newCam.getPos().getZ()));
+                ground = (int) CustomRayCast.throwRayToCenter().getPos().y;
+                System.out.println(newCam.getPos().getY());
+                System.out.println("ground: " + ground + 2);
+            }
+            MCity.cam.setPos(newCam.getPos());
+
             if (!MCity.mouseMoving) {
                 MCity.mouseMoving = true;
 
