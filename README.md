@@ -1,4 +1,4 @@
-# 📷 CameraMod
+![image](https://github.com/user-attachments/assets/524e2e0b-5dd8-4faf-9736-1c39c84535c2)# 📷 CameraMod
 
 A Minecraft mod that brings Cities: Skylines-inspired camera controls to your game, allowing for dynamic camera views and smooth zooming capabilities.
 
@@ -38,7 +38,8 @@ A Minecraft mod that brings Cities: Skylines-inspired camera controls to your ga
 
 ## 📸 Gallery
 
-![Preview Image](preview.png)
+![image](https://github.com/user-attachments/assets/c3b3b625-1ff9-471b-8390-3bd4c19e6854)
+
 *Example of the camera mod in action*
 
 ## 🔄 Version History
