@@ -10,6 +10,7 @@
   "client": [
     "CameraView",
     "ListenerMixin",
+    "KeyboardHandlerMixin",
     "MouseMixin",
     "RemoveBlockOutline",
     "RemoveHand",

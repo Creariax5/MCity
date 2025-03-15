@@ -8,10 +8,12 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.navigation.Navigable;
 import net.minecraft.util.math.Vec3d;
+import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Element.class)
 public interface ListenerMixin extends Navigable {
@@ -24,8 +26,8 @@ public interface ListenerMixin extends Navigable {
         MCity.mouseY = y;
 
         if (Zoom.mouseAtBorder(x, y)) {
-            Zoom.setX((float) (x - MinecraftClient.getInstance().getWindow().getWidth() /4));
-            Zoom.setY((float) (y - MinecraftClient.getInstance().getWindow().getHeight() /4));
+            Zoom.setX((float) (x - MinecraftClient.getInstance().getWindow().getWidth() / 4));
+            Zoom.setY((float) (y - MinecraftClient.getInstance().getWindow().getHeight() / 4));
 
             Camera newCam = new Camera(MCity.cam);
             newCam.setPitch(90);
@@ -71,17 +73,4 @@ public interface ListenerMixin extends Navigable {
             MCity.cam.updateDir();
         }
     }
-
-    /*@Inject(at = @At("HEAD"), method = "keyPressed(III)Z")
-    default void keyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        if (MCity.mouse_middle_pressed) {
-            if (keyCode == GLFW.GLFW_KEY_W) {
-                Vec3d dir = MCity.cam.getDir();
-                Vec3d pos = MCity.cam.getPos();
-                System.out.println("hiiiii");
-
-                MCity.cam.setPos(new Vec3d(pos.getX() + (dir.getX()/MCity.cam.getXz()), pos.getY(), pos.getZ() + (dir.getZ()/MCity.cam.getXz())));
-            }
-        }
-    }*/
 }

@@ -1,6 +1,7 @@
 package elc.florian.mcity.client;
 
 import elc.florian.mcity.MCity;
+import elc.florian.mcity.mixin.ListenerMixin;
 import elc.florian.mcity.utils.Tools;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.Vec2f;
@@ -95,7 +96,7 @@ public class Zoom {
             public void run() {
                 MCity.cam.setPos(new Vec3d(pos.getX() - finalMouseDir.x, pos.getY(), pos.getZ() - finalMouseDir.y));
 
-                if (MCity.mouseMoving) {
+                if (MCity.mouseMoving || MCity.isKeyMoving()) {
                     move();
                 }
             }

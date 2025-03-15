@@ -27,6 +27,15 @@ public class MCity implements ModInitializer {
 	public static boolean newDeplace;
 	public static boolean mouseMoving;
 
+	public static boolean keyW_pressed = false;
+	public static boolean keyA_pressed = false;
+	public static boolean keyS_pressed = false;
+	public static boolean keyD_pressed = false;
+
+	public static boolean isKeyMoving() {
+		return keyW_pressed || keyA_pressed || keyS_pressed || keyD_pressed;
+	}
+
 	@Override
 	public void onInitialize() {
 		// This code runs as soon as Minecraft is in a mod-load-ready state.
