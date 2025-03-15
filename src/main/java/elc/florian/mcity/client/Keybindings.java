@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.util.math.Vec3d;
 import org.lwjgl.glfw.GLFW;
 import net.minecraft.text.Text;
 
@@ -26,8 +27,14 @@ public class Keybindings {
                 assert client.player != null;
                 MCity.detached = !MCity.detached;
 
-                client.setScreen(new EditingGUI(Text.of("hi")));
+                double x = client.player.getX();
+                double y = client.player.getY();
+                double z = client.player.getZ();
 
+                Vec3d playerPos = new Vec3d(x, y + 100, z);
+                MCity.cam.setPos(playerPos);
+
+                client.setScreen(new EditingGUI(Text.of("hi")));
             }
         });
 
