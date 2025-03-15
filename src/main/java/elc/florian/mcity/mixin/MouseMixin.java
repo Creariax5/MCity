@@ -3,8 +3,15 @@ package elc.florian.mcity.mixin;
 import elc.florian.mcity.MCity;
 import elc.florian.mcity.client.CustomRayCast;
 import elc.florian.mcity.client.Zoom;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
+import net.minecraft.client.network.ClientPlayerInteractionManager;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Position;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -37,6 +44,13 @@ public class MouseMixin {
             if (button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
                 MCity.mouse_middle_pressed = action == 1;
                 MCity.newDeplace = true;
+                return;
+            }
+            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && action == 1) {
+                HitResult hit = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
+                BlockHitResult blockHit = (BlockHitResult) hit;
+                BlockPos blockPos = blockHit.getBlockPos();
+                MinecraftClient.getInstance().interactionManager.breakBlock(blockPos);
                 return;
             }
 

@@ -114,6 +114,7 @@ public class CustomRayCast {
                 BlockPos blockPos = blockHit.getBlockPos();
                 BlockState blockState = client.world.getBlockState(blockPos);
                 Block block = blockState.getBlock();
+
                 break;
             case ENTITY:
                 EntityHitResult entityHit = (EntityHitResult) hit;

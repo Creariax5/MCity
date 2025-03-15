@@ -11,20 +11,17 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 public class ModItemGroups {
-    public static final ItemGroup RUBY_GROUP = Registry.register(Registries.ITEM_GROUP,
-            new Identifier(MCity.MOD_ID, "road"),
-            FabricItemGroup.builder().displayName(Text.translatable("itemgroup.road"))
+    public static final ItemGroup ROAD_GROUP = Registry.register(Registries.ITEM_GROUP,
+            Identifier.of(MCity.MOD_ID, "roads"),
+            FabricItemGroup.builder().displayName(Text.translatable("itemgroup.roads"))
                     .icon(() -> new ItemStack(ModItem.ROAD)).entries((displayContext, entries) -> {
                         entries.add(ModItem.ROAD);
-
-                        entries.add(Items.DIAMOND);
-
-
+                        entries.add(ModItem.AREA);
+                        entries.add(ModItem.WATER);
+                        entries.add(ModItem.ELECTRICITY);
                     }).build());
-
 
     public static void registerItemGroups() {
         MCity.LOGGER.info("Registering Item Groups for " + MCity.MOD_ID);
     }
-
 }

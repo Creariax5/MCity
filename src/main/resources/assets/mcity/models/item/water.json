@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "mcity:item/road"
+    "layer0": "mcity:item/water"
   }
 }

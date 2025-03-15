@@ -1,6 +1,9 @@
 {
-  "itemgroup.road": "MCity",
   "item.mcity.road": "Road",
+  "item.mcity.area": "Area",
+  "item.mcity.water": "Water",
+  "item.mcity.electricity": "Electricity",
+  "itemgroup.roads": "Roads",
 
   "category.city_editor_view": "MCity",
   "key.city_editor_view": " Switch to City editor view"

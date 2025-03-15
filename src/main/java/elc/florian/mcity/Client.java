@@ -10,6 +10,5 @@ public class Client implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         //HudRenderCallback.EVENT.register(new HudOverlay());
-
     }
 }

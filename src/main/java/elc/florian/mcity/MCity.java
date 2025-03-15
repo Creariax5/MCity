@@ -35,8 +35,8 @@ public class MCity implements ModInitializer {
 
 		LOGGER.info("Hello Fabric world!");
 
-		ModItemGroups.registerItemGroups();
-		ModItem.registerModItems();
+//		ModItem.registerModItems();
+//		ModItemGroups.registerItemGroups();
 
 		Keybindings.registerKeybindings();
 	}
