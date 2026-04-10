@@ -20,7 +20,7 @@ public class HudOverlay implements HudRenderCallback {
 
         MinecraftClient client = MinecraftClient.getInstance();
 
-        if (client != null) {
+        if (client != null && MCity.detached) {
             int width = client.getWindow().getScaledWidth();
             int height = client.getWindow().getScaledHeight();
 

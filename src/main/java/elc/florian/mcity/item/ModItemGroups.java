@@ -4,15 +4,19 @@ import elc.florian.mcity.MCity;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 public class ModItemGroups {
+    public static final RegistryKey<ItemGroup> ROAD_GROUP_KEY =
+            RegistryKey.of(RegistryKeys.ITEM_GROUP, Identifier.of(MCity.MOD_ID, "roads"));
+
     public static final ItemGroup ROAD_GROUP = Registry.register(Registries.ITEM_GROUP,
-            Identifier.of(MCity.MOD_ID, "roads"),
+            ROAD_GROUP_KEY,
             FabricItemGroup.builder().displayName(Text.translatable("itemgroup.roads"))
                     .icon(() -> new ItemStack(ModItem.ROAD)).entries((displayContext, entries) -> {
                         entries.add(ModItem.ROAD);

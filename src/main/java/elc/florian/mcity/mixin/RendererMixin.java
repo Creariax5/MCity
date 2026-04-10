@@ -36,11 +36,9 @@ public class RendererMixin {
             CallbackInfo ci
     ) {
         if (MCity.detached) {
-            // Get the Minecraft client instance
             MinecraftClient client = MinecraftClient.getInstance();
-
-            // Replace the crosshairTarget with our custom raycast
             client.crosshairTarget = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
         }
     }
+
 }

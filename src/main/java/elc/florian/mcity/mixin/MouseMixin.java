@@ -1,7 +1,10 @@
 package elc.florian.mcity.mixin;
 
 import elc.florian.mcity.MCity;
+import elc.florian.mcity.client.BuildingPlacer;
 import elc.florian.mcity.client.CustomRayCast;
+import elc.florian.mcity.client.RoadPlacer;
+import elc.florian.mcity.client.ToolbarHelper;
 import elc.florian.mcity.client.Zoom;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -47,10 +50,60 @@ public class MouseMixin {
                 return;
             }
             if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && action == 1) {
+                if (ToolbarHelper.handleInfoBarClick(MCity.mouseX, MCity.mouseY)) {
+                    return;
+                }
+                if (ToolbarHelper.handleToolbarClick(MCity.mouseX, MCity.mouseY)) {
+                    return;
+                }
                 HitResult hit = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
                 BlockHitResult blockHit = (BlockHitResult) hit;
-                BlockPos blockPos = blockHit.getBlockPos();
-                MinecraftClient.getInstance().interactionManager.breakBlock(blockPos);
+                BlockPos blockPos = blockHit.getBlockPos().toImmutable();
+
+                if (MCity.selectedTool == MCity.ToolType.ROAD && MCity.selectedRoadType != null) {
+                    // Ligne entre 2 points
+                    if (MCity.lineFirstPoint == null) {
+                        MCity.lineFirstPoint = blockPos;
+                    } else {
+                        RoadPlacer.placeRoad(MCity.lineFirstPoint, blockPos, MCity.selectedRoadType);
+                        MCity.lineFirstPoint = null;
+                    }
+                } else if (MCity.selectedTool == MCity.ToolType.AREA && MCity.selectedAreaType != null) {
+                    switch (MCity.selectedAreaType) {
+                        case HABITATION -> BuildingPlacer.placeHouse(blockPos);
+                        case COMMERCE -> BuildingPlacer.placeCommerce(blockPos);
+                        case INDUSTRIE -> BuildingPlacer.placeIndustrie(blockPos);
+                        case FERME -> BuildingPlacer.placeFerme(blockPos);
+                    }
+                } else if (MCity.selectedTool == MCity.ToolType.WATER && MCity.selectedWaterType != null) {
+                    switch (MCity.selectedWaterType) {
+                        case PUITS -> BuildingPlacer.placePuits(blockPos);
+                        case CANALISATION -> {
+                            if (MCity.lineFirstPoint == null) {
+                                MCity.lineFirstPoint = blockPos;
+                            } else {
+                                RoadPlacer.placeCanalisation(MCity.lineFirstPoint, blockPos);
+                                MCity.lineFirstPoint = null;
+                            }
+                        }
+                        case RESERVOIR -> BuildingPlacer.placeReservoir(blockPos);
+                    }
+                } else if (MCity.selectedTool == MCity.ToolType.ELECTRICITY && MCity.selectedElectricityType != null) {
+                    switch (MCity.selectedElectricityType) {
+                        case GENERATEUR -> BuildingPlacer.placeGenerateur(blockPos);
+                        case CABLE -> {
+                            if (MCity.lineFirstPoint == null) {
+                                MCity.lineFirstPoint = blockPos;
+                            } else {
+                                RoadPlacer.placeCable(MCity.lineFirstPoint, blockPos);
+                                MCity.lineFirstPoint = null;
+                            }
+                        }
+                        case TOUR_RELAIS -> BuildingPlacer.placeTourRelais(blockPos);
+                    }
+                } else {
+                    BuildingPlacer.breakBlock(blockPos);
+                }
                 return;
             }
 
