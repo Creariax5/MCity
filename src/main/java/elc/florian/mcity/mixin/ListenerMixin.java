@@ -48,12 +48,12 @@ public interface ListenerMixin extends Navigable {
             MCity.mouseMoving = false;
         }
 
-        if (MCity.mouse_middle_pressed) {
+        if (MCity.mouseMiddlePressed) {
 
-            if (MCity.newDeplace) {
+            if (MCity.newDragStart) {
                 MCity.lastX = x;
                 MCity.lastY = y;
-                MCity.newDeplace = false;
+                MCity.newDragStart = false;
 
             }
             double moveX;

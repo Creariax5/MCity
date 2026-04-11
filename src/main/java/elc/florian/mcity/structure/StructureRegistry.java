@@ -165,7 +165,7 @@ public class StructureRegistry {
                 structures.add(s);
                 indexStructure(s);
             }
-            nextId = root.get("nextId").getAsInt();
+            nextId = root.has("nextId") ? root.get("nextId").getAsInt() : structures.size();
             MCity.LOGGER.info("Loaded " + structures.size() + " structures from " + file);
         } catch (Exception e) {
             MCity.LOGGER.error("Failed to load structures", e);

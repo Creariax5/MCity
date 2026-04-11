@@ -55,7 +55,7 @@ public class BuildingPreview {
         }
 
         if (MCity.selectedTool == MCity.ToolType.ROAD && MCity.selectedRoadType != null) {
-            renderLinePreview(context, getRoadColor(MCity.selectedRoadType), RoadPlacer.getWidth(MCity.selectedRoadType), true);
+            renderLinePreview(context, ROAD_COLOR, MCity.ROAD_WIDTH, true);
         } else if (MCity.selectedTool == MCity.ToolType.WATER && MCity.selectedWaterType != null) {
             if (MCity.selectedWaterType == MCity.WaterType.CANALISATION) {
                 renderLinePreview(context, COPPER_COLOR, 1, false);
@@ -132,9 +132,6 @@ public class BuildingPreview {
         endRender(buffer, matrices);
     }
 
-    private static float[] getRoadColor(MCity.RoadType type) {
-        return ROAD_COLOR;
-    }
 
     private static void renderSimplePreview(WorldRenderContext context, float[] color) {
         MinecraftClient client = MinecraftClient.getInstance();

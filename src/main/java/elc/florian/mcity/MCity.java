@@ -53,10 +53,10 @@ public class MCity implements ModInitializer {
 	public static ArrayList<KeyBinding> keyBinding = new ArrayList<>();
 
 	// === Mouse state ===
-	public static boolean mouse_middle_pressed = false;
+	public static boolean mouseMiddlePressed = false;
 	public static double lastX, lastY;
 	public static double mouseX, mouseY;
-	public static boolean newDeplace;
+	public static boolean newDragStart;
 	public static boolean mouseMoving;
 
 	// === Keyboard state ===

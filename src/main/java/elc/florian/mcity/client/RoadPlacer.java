@@ -18,18 +18,6 @@ import java.util.Set;
 
 public class RoadPlacer {
 
-    public static int getWidth(MCity.RoadType type) {
-        return MCity.ROAD_WIDTH;
-    }
-
-    public static BlockState getBlock(MCity.RoadType type) {
-        return Blocks.COBBLESTONE.getDefaultState();
-    }
-
-    private static StructureKind getRoadKind(MCity.RoadType type) {
-        return StructureKind.ROAD_ROAD;
-    }
-
     /** Longueur euclidienne entre from et to en blocs. */
     public static double segmentLength(BlockPos from, BlockPos to) {
         int dx = to.getX() - from.getX();
@@ -99,24 +87,23 @@ public class RoadPlacer {
         return client.getServer().getOverworld();
     }
 
-    public static boolean placeRoad(BlockPos from, BlockPos to, MCity.RoadType type) {
+    public static boolean placeRoad(BlockPos from, BlockPos to) {
         ServerWorld world = world();
         if (world == null) return false;
 
         if (segmentLength(from, to) < MCity.ROAD_MIN_LENGTH) return false;
 
-        int width = getWidth(type);
-        List<BlockPos> blocks = computeRoadBlocks(from, to, width);
+        List<BlockPos> blocks = computeRoadBlocks(from, to, MCity.ROAD_WIDTH);
         Set<BlockPos> placedBlocks = new HashSet<>(blocks);
 
         if (StructureRegistry.collides(placedBlocks)) return false;
 
         PlacedStructure ps = new PlacedStructure();
-        ps.kind = getRoadKind(type);
+        ps.kind = StructureKind.ROAD_ROAD;
         ps.lineFrom = from;
         ps.lineTo = to;
 
-        BlockState block = getBlock(type);
+        BlockState block = Blocks.COBBLESTONE.getDefaultState();
         for (BlockPos pos : blocks) {
             ps.previousStates.put(pos, world.getBlockState(pos));
             ps.blocks.add(pos);

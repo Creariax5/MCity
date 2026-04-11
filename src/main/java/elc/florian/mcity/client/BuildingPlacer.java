@@ -58,7 +58,7 @@ public class BuildingPlacer {
             StructureRegistry.remove(s);
 
             boolean ok = switch (s.kind) {
-                case ROAD_ROAD -> RoadPlacer.placeRoad(newFrom, newTo, MCity.RoadType.ROAD);
+                case ROAD_ROAD -> RoadPlacer.placeRoad(newFrom, newTo);
                 case CANALISATION -> RoadPlacer.placeCanalisation(newFrom, newTo);
                 case CABLE -> RoadPlacer.placeCable(newFrom, newTo);
                 default -> false;

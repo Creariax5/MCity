@@ -41,8 +41,8 @@ public class MouseMixin {
         if (!MCity.detached) return;
 
         if (button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
-            MCity.mouse_middle_pressed = action == 1;
-            MCity.newDeplace = true;
+            MCity.mouseMiddlePressed = action == 1;
+            MCity.newDragStart = true;
             return;
         }
 
@@ -80,7 +80,7 @@ public class MouseMixin {
         MCity.selectedStructure = null;
 
         if (MCity.selectedTool == MCity.ToolType.ROAD && MCity.selectedRoadType != null) {
-            handleLinePlacement(blockPos, () -> RoadPlacer.placeRoad(MCity.lineFirstPoint, blockPos, MCity.selectedRoadType));
+            handleLinePlacement(blockPos, () -> RoadPlacer.placeRoad(MCity.lineFirstPoint, blockPos));
         } else if (MCity.selectedTool == MCity.ToolType.AREA && MCity.selectedAreaType != null) {
             placeZone(blockPos);
         } else if (MCity.selectedTool == MCity.ToolType.WATER && MCity.selectedWaterType != null) {
