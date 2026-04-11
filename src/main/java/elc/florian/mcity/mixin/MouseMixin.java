@@ -6,15 +6,14 @@ import elc.florian.mcity.client.CustomRayCast;
 import elc.florian.mcity.client.RoadPlacer;
 import elc.florian.mcity.client.ToolbarHelper;
 import elc.florian.mcity.client.Zoom;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
+import elc.florian.mcity.structure.PlacedStructure;
+import elc.florian.mcity.structure.StructureRegistry;
+import elc.florian.mcity.structure.ZoneRegistry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
-import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Position;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,89 +27,105 @@ public class MouseMixin {
     @Shadow @Final private MinecraftClient client;
 
     @Inject(at = @At("RETURN"), method = "onMouseScroll(JDD)V")
-    private void onOnMouseScroll(long window, double horizontal, double vertical, CallbackInfo ci)
-    {
-        if (MCity.detached) {
-            if (MCity.cam.isZooming()) {
-                MCity.cam.setSpeed((int) (MCity.cam.getSpeed() + vertical));
-                return;
-            }
-
+    private void onMouseScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
+        if (!MCity.detached) return;
+        if (MCity.cam.isZooming()) {
+            MCity.cam.setSpeed((int) (MCity.cam.getSpeed() + vertical));
+        } else {
             Zoom.zoom(vertical);
         }
     }
 
     @Inject(at = @At("HEAD"), method = "onMouseButton(JIII)V")
-    private void onMouseButton(long window, int button, int action, int mods, CallbackInfo ci)
-    {
-        if (MCity.detached) {
-            if (button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
-                MCity.mouse_middle_pressed = action == 1;
-                MCity.newDeplace = true;
-                return;
-            }
-            if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && action == 1) {
-                if (ToolbarHelper.handleInfoBarClick(MCity.mouseX, MCity.mouseY)) {
-                    return;
-                }
-                if (ToolbarHelper.handleToolbarClick(MCity.mouseX, MCity.mouseY)) {
-                    return;
-                }
-                HitResult hit = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
-                BlockHitResult blockHit = (BlockHitResult) hit;
-                BlockPos blockPos = blockHit.getBlockPos().toImmutable();
+    private void onMouseButton(long window, int button, int action, int mods, CallbackInfo ci) {
+        if (!MCity.detached) return;
 
-                if (MCity.selectedTool == MCity.ToolType.ROAD && MCity.selectedRoadType != null) {
-                    // Ligne entre 2 points
-                    if (MCity.lineFirstPoint == null) {
-                        MCity.lineFirstPoint = blockPos;
-                    } else {
-                        RoadPlacer.placeRoad(MCity.lineFirstPoint, blockPos, MCity.selectedRoadType);
-                        MCity.lineFirstPoint = null;
-                    }
-                } else if (MCity.selectedTool == MCity.ToolType.AREA && MCity.selectedAreaType != null) {
-                    switch (MCity.selectedAreaType) {
-                        case HABITATION -> BuildingPlacer.placeHouse(blockPos);
-                        case COMMERCE -> BuildingPlacer.placeCommerce(blockPos);
-                        case INDUSTRIE -> BuildingPlacer.placeIndustrie(blockPos);
-                        case FERME -> BuildingPlacer.placeFerme(blockPos);
-                    }
-                } else if (MCity.selectedTool == MCity.ToolType.WATER && MCity.selectedWaterType != null) {
-                    switch (MCity.selectedWaterType) {
-                        case PUITS -> BuildingPlacer.placePuits(blockPos);
-                        case CANALISATION -> {
-                            if (MCity.lineFirstPoint == null) {
-                                MCity.lineFirstPoint = blockPos;
-                            } else {
-                                RoadPlacer.placeCanalisation(MCity.lineFirstPoint, blockPos);
-                                MCity.lineFirstPoint = null;
-                            }
-                        }
-                        case RESERVOIR -> BuildingPlacer.placeReservoir(blockPos);
-                    }
-                } else if (MCity.selectedTool == MCity.ToolType.ELECTRICITY && MCity.selectedElectricityType != null) {
-                    switch (MCity.selectedElectricityType) {
-                        case GENERATEUR -> BuildingPlacer.placeGenerateur(blockPos);
-                        case CABLE -> {
-                            if (MCity.lineFirstPoint == null) {
-                                MCity.lineFirstPoint = blockPos;
-                            } else {
-                                RoadPlacer.placeCable(MCity.lineFirstPoint, blockPos);
-                                MCity.lineFirstPoint = null;
-                            }
-                        }
-                        case TOUR_RELAIS -> BuildingPlacer.placeTourRelais(blockPos);
-                    }
-                } else {
-                    BuildingPlacer.breakBlock(blockPos);
-                }
-                return;
-            }
+        if (button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
+            MCity.mouse_middle_pressed = action == 1;
+            MCity.newDeplace = true;
+            return;
+        }
 
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && action == 1) {
+            handleLeftClick();
         }
     }
-    @Shadow
-    private double x;
-    @Shadow
-    private double y;
+
+    private void handleLeftClick() {
+        // UI d'abord
+        if (ToolbarHelper.handleInfoBarClick(MCity.mouseX, MCity.mouseY)) return;
+        if (ToolbarHelper.handleActionPanelClick(MCity.mouseX, MCity.mouseY)) return;
+        if (ToolbarHelper.handleToolbarClick(MCity.mouseX, MCity.mouseY)) return;
+
+        // Raycast sur le monde
+        HitResult hit = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
+        if (hit.getType() != HitResult.Type.BLOCK) return;
+        BlockPos blockPos = ((BlockHitResult) hit).getBlockPos().toImmutable();
+
+        // Mode déplacement : on reclique pour poser la structure déplacée
+        if (MCity.moveMode && MCity.selectedStructure != null) {
+            BuildingPlacer.moveStructureTo(MCity.selectedStructure, blockPos);
+            MCity.moveMode = false;
+            return;
+        }
+
+        // Aucun outil → sélection
+        if (MCity.selectedTool == null) {
+            PlacedStructure found = StructureRegistry.findAt(blockPos);
+            MCity.selectedStructure = found;
+            return;
+        }
+
+        // Outil actif → placement
+        MCity.selectedStructure = null;
+
+        if (MCity.selectedTool == MCity.ToolType.ROAD && MCity.selectedRoadType != null) {
+            handleLinePlacement(blockPos, () -> RoadPlacer.placeRoad(MCity.lineFirstPoint, blockPos, MCity.selectedRoadType));
+        } else if (MCity.selectedTool == MCity.ToolType.AREA && MCity.selectedAreaType != null) {
+            placeZone(blockPos);
+        } else if (MCity.selectedTool == MCity.ToolType.WATER && MCity.selectedWaterType != null) {
+            switch (MCity.selectedWaterType) {
+                case PUITS -> BuildingPlacer.placePuits(blockPos, 0);
+                case CANALISATION -> handleLinePlacement(blockPos, () -> RoadPlacer.placeCanalisation(MCity.lineFirstPoint, blockPos));
+                case RESERVOIR -> BuildingPlacer.placeReservoir(blockPos, 0);
+            }
+        } else if (MCity.selectedTool == MCity.ToolType.ELECTRICITY && MCity.selectedElectricityType != null) {
+            switch (MCity.selectedElectricityType) {
+                case GENERATEUR -> BuildingPlacer.placeGenerateur(blockPos, 0);
+                case CABLE -> handleLinePlacement(blockPos, () -> RoadPlacer.placeCable(MCity.lineFirstPoint, blockPos));
+                case TOUR_RELAIS -> BuildingPlacer.placeTourRelais(blockPos, 0);
+            }
+        } else {
+            BuildingPlacer.breakBlock(blockPos);
+        }
+    }
+
+    private void placeZone(BlockPos pos) {
+        int tx = ZoneRegistry.blockToTile(pos.getX());
+        int tz = ZoneRegistry.blockToTile(pos.getZ());
+        boolean erase = MCity.selectedAreaType == MCity.AreaType.DEZONNAGE;
+
+        if (MCity.zoneFillMode) {
+            if (erase) {
+                ZoneRegistry.floodClear(tx, tz);
+            } else {
+                ZoneRegistry.floodFill(tx, tz, MCity.selectedAreaType);
+            }
+        } else {
+            if (erase) {
+                ZoneRegistry.removeZone(tx, tz);
+            } else {
+                ZoneRegistry.setZone(tx, tz, MCity.selectedAreaType);
+            }
+        }
+    }
+
+    private void handleLinePlacement(BlockPos blockPos, Runnable placeLine) {
+        if (MCity.lineFirstPoint == null) {
+            MCity.lineFirstPoint = blockPos;
+        } else {
+            placeLine.run();
+            MCity.lineFirstPoint = null;
+        }
+    }
 }

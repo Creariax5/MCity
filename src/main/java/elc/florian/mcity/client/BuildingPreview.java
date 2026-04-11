@@ -2,6 +2,7 @@ package elc.florian.mcity.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import elc.florian.mcity.MCity;
+import elc.florian.mcity.structure.ZoneRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.ShaderProgramKeys;
@@ -16,15 +17,10 @@ import java.util.List;
 
 public class BuildingPreview {
 
-    // Maison
-    private static final int HOUSE_WIDTH = 5;
-    private static final int HOUSE_DEPTH = 5;
-    private static final int HOUSE_HEIGHT = 4;
-
+    // Couleurs preview
     private static final float[] WALL_COLOR  = {0.6f, 0.4f, 0.2f, 0.35f};
     private static final float[] FLOOR_COLOR = {0.5f, 0.5f, 0.5f, 0.35f};
     private static final float[] ROOF_COLOR  = {0.5f, 0.35f, 0.15f, 0.35f};
-    private static final float[] GLASS_COLOR = {0.6f, 0.8f, 1.0f, 0.25f};
 
     // Lignes
     private static final float[] PATH_COLOR    = {0.55f, 0.45f, 0.3f, 0.4f};
@@ -38,30 +34,66 @@ public class BuildingPreview {
     private static final float[] BUILDING_COLOR = {0.5f, 0.5f, 0.5f, 0.3f};
     private static final float[] WATER_COLOR = {0.2f, 0.4f, 0.8f, 0.3f};
     private static final float[] ELEC_COLOR = {0.8f, 0.2f, 0.2f, 0.3f};
+    private static final float[] HIGHLIGHT_COLOR = {1.0f, 1.0f, 0.3f, 0.35f};
+
+    // Couleurs des zones
+    private static final float[] ZONE_GRID_COLOR = {1.0f, 1.0f, 1.0f, 0.10f};
+    private static final float[] ZONE_HABITATION = {0.3f, 0.9f, 0.3f, 0.35f};
+    private static final float[] ZONE_COMMERCE   = {0.3f, 0.5f, 0.9f, 0.35f};
+    private static final float[] ZONE_INDUSTRIE  = {0.9f, 0.8f, 0.3f, 0.35f};
 
     public static void render(WorldRenderContext context) {
         if (!MCity.detached) return;
 
+        if (MCity.selectedStructure != null) {
+            renderHighlight(context);
+        }
+
+        // Grille de zones visible en mode AREA
+        if (MCity.selectedTool == MCity.ToolType.AREA) {
+            renderZoneGrid(context);
+        }
+
         if (MCity.selectedTool == MCity.ToolType.ROAD && MCity.selectedRoadType != null) {
-            renderLinePreview(context, getRoadColor(MCity.selectedRoadType), RoadPlacer.getWidth(MCity.selectedRoadType));
-        } else if (MCity.selectedTool == MCity.ToolType.AREA && MCity.selectedAreaType != null) {
-            renderBuildingPreview(context);
+            renderLinePreview(context, getRoadColor(MCity.selectedRoadType), RoadPlacer.getWidth(MCity.selectedRoadType), true);
         } else if (MCity.selectedTool == MCity.ToolType.WATER && MCity.selectedWaterType != null) {
             if (MCity.selectedWaterType == MCity.WaterType.CANALISATION) {
-                renderLinePreview(context, COPPER_COLOR, 1);
+                renderLinePreview(context, COPPER_COLOR, 1, false);
             } else {
                 renderSimplePreview(context, WATER_COLOR);
             }
         } else if (MCity.selectedTool == MCity.ToolType.ELECTRICITY && MCity.selectedElectricityType != null) {
             if (MCity.selectedElectricityType == MCity.ElectricityType.CABLE) {
-                renderLinePreview(context, REDSTONE_COLOR, 1);
+                renderLinePreview(context, REDSTONE_COLOR, 1, false);
             } else {
                 renderSimplePreview(context, ELEC_COLOR);
             }
         }
     }
 
-    private static void renderLinePreview(WorldRenderContext context, float[] color, int width) {
+    private static void renderHighlight(WorldRenderContext context) {
+        elc.florian.mcity.structure.PlacedStructure s = MCity.selectedStructure;
+        if (s == null || s.blocks.isEmpty()) return;
+
+        MatrixStack matrices = context.matrixStack();
+        matrices.push();
+        matrices.translate(-context.camera().getPos().x, -context.camera().getPos().y, -context.camera().getPos().z);
+        Matrix4f posMatrix = matrices.peek().getPositionMatrix();
+
+        beginRender();
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+
+        for (BlockPos p : s.blocks) {
+            drawBlock(buffer, posMatrix, p.getX(), p.getY(), p.getZ(), HIGHLIGHT_COLOR);
+        }
+
+        endRender(buffer, matrices);
+    }
+
+    private static final float[] INVALID_COLOR = {1.0f, 0.2f, 0.2f, 0.5f};
+
+    private static void renderLinePreview(WorldRenderContext context, float[] color, int width, boolean canValidate) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.world == null) return;
 
@@ -82,8 +114,15 @@ public class BuildingPreview {
 
         if (MCity.lineFirstPoint != null) {
             List<BlockPos> blocks = RoadPlacer.computeRoadBlocks(MCity.lineFirstPoint, mousePos, width);
+
+            float[] drawColor = color;
+            if (canValidate) {
+                boolean valid = RoadPlacer.isRoadValid(MCity.lineFirstPoint, mousePos);
+                if (!valid) drawColor = INVALID_COLOR;
+            }
+
             for (BlockPos pos : blocks) {
-                drawFlatBlock(buffer, posMatrix, pos.getX(), pos.getY(), pos.getZ(), color);
+                drawFlatBlock(buffer, posMatrix, pos.getX(), pos.getY(), pos.getZ(), drawColor);
             }
             drawBlock(buffer, posMatrix, MCity.lineFirstPoint.getX(), MCity.lineFirstPoint.getY(), MCity.lineFirstPoint.getZ(), MARKER_COLOR);
         } else {
@@ -94,11 +133,7 @@ public class BuildingPreview {
     }
 
     private static float[] getRoadColor(MCity.RoadType type) {
-        return switch (type) {
-            case PATH -> PATH_COLOR;
-            case ROAD -> ROAD_COLOR;
-            case HIGHWAY -> HIGHWAY_COLOR;
-        };
+        return ROAD_COLOR;
     }
 
     private static void renderSimplePreview(WorldRenderContext context, float[] color) {
@@ -132,26 +167,27 @@ public class BuildingPreview {
         endRender(buffer, matrices);
     }
 
-    private static void renderBuildingPreview(WorldRenderContext context) {
+    private static float[] getZoneColor(MCity.AreaType type) {
+        return switch (type) {
+            case HABITATION -> ZONE_HABITATION;
+            case COMMERCE -> ZONE_COMMERCE;
+            case INDUSTRIE -> ZONE_INDUSTRIE;
+            case DEZONNAGE -> ZONE_GRID_COLOR;
+        };
+    }
+
+    private static void renderZoneGrid(WorldRenderContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.world == null) return;
 
+        java.util.Set<Long> placeable = ZoneRegistry.getPlaceableTiles();
+        if (placeable.isEmpty() && ZoneRegistry.allZones().isEmpty()) return;
+
+        // Y au niveau de la souris (approximatif — sol au niveau du bloc pointé)
         HitResult hit = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
-        if (hit == null || hit.getType() != HitResult.Type.BLOCK) return;
-
-        BlockHitResult blockHit = (BlockHitResult) hit;
-        BlockPos base = blockHit.getBlockPos().up();
-
-        // Taille et couleur selon le type
-        int w, d, h;
-        float[] color;
-        switch (MCity.selectedAreaType) {
-            case HABITATION -> { w = 5; d = 5; h = 5; color = WALL_COLOR; }
-            case COMMERCE -> { w = 5; d = 3; h = 4; color = new float[]{0.8f, 0.2f, 0.2f, 0.3f}; }
-            case INDUSTRIE -> { w = 6; d = 5; h = 6; color = FLOOR_COLOR; }
-            case FERME -> { w = 7; d = 7; h = 2; color = new float[]{0.4f, 0.6f, 0.2f, 0.3f}; }
-            default -> { return; }
-        }
+        int y = (hit != null && hit.getType() == HitResult.Type.BLOCK)
+                ? ((BlockHitResult) hit).getBlockPos().getY() + 1
+                : 64;
 
         MatrixStack matrices = context.matrixStack();
         matrices.push();
@@ -162,23 +198,38 @@ public class BuildingPreview {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
 
-        for (int x = 0; x < w; x++) {
-            for (int z = 0; z < d; z++) {
-                // Sol
-                drawFlatBlock(buffer, posMatrix, base.getX() + x, base.getY() - 1, base.getZ() + z, color);
-                // Murs (contour)
-                boolean isWall = x == 0 || x == w - 1 || z == 0 || z == d - 1;
-                if (isWall) {
-                    for (int y = 0; y < h; y++) {
-                        drawBlock(buffer, posMatrix, base.getX() + x, base.getY() + y, base.getZ() + z, color);
-                    }
-                }
-                // Toit
-                drawFlatBlock(buffer, posMatrix, base.getX() + x, base.getY() + h - 1, base.getZ() + z, ROOF_COLOR);
-            }
+        int tileSize = ZoneRegistry.TILE_SIZE;
+
+        // Grille fantôme de toutes les tiles plaçables
+        for (long key : placeable) {
+            int tx = ZoneRegistry.tileX(key);
+            int tz = ZoneRegistry.tileZ(key);
+            float x0 = tx * tileSize;
+            float z0 = tz * tileSize;
+            drawTile(buffer, posMatrix, x0, y, z0, tileSize, ZONE_GRID_COLOR);
+        }
+
+        // Tiles zonées : couleur pleine
+        for (java.util.Map.Entry<Long, MCity.AreaType> e : ZoneRegistry.allZones().entrySet()) {
+            int tx = ZoneRegistry.tileX(e.getKey());
+            int tz = ZoneRegistry.tileZ(e.getKey());
+            float x0 = tx * tileSize;
+            float z0 = tz * tileSize;
+            drawTile(buffer, posMatrix, x0, y, z0, tileSize, getZoneColor(e.getValue()));
         }
 
         endRender(buffer, matrices);
+    }
+
+    private static void drawTile(BufferBuilder buffer, Matrix4f matrix, float x, float y, float z, int size, float[] color) {
+        float y1 = y + 0.05f;
+        float x1 = x + size;
+        float z1 = z + size;
+        float r = color[0], g = color[1], b = color[2], a = color[3];
+        buffer.vertex(matrix, x, y1, z).color(r, g, b, a);
+        buffer.vertex(matrix, x, y1, z1).color(r, g, b, a);
+        buffer.vertex(matrix, x1, y1, z1).color(r, g, b, a);
+        buffer.vertex(matrix, x1, y1, z).color(r, g, b, a);
     }
 
     private static void beginRender() {

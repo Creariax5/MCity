@@ -26,6 +26,8 @@ public abstract class RemoveHud {
                 renderInfoBar(drawContext, client, width, height);
                 renderToolbar(drawContext, client, width, height);
                 renderPanel(drawContext, client, width, height);
+                renderActionPanel(drawContext, client, width, height);
+                renderFillModeToggle(drawContext, client, width, height);
             }
             info.cancel();
         }
@@ -134,6 +136,53 @@ public abstract class RemoveHud {
             int iconX = btnX + (ToolbarHelper.BUTTON_SIZE - 16) / 2;
             int iconY = buttonY + (ToolbarHelper.BUTTON_SIZE - 16) / 2;
             dc.drawItem(new ItemStack(ToolbarHelper.TOOL_ITEMS[i]), iconX, iconY);
+        }
+    }
+
+    private void renderFillModeToggle(DrawContext dc, MinecraftClient client, int width, int height) {
+        if (MCity.selectedTool != MCity.ToolType.AREA) return;
+
+        int startX = ToolbarHelper.getToolbarStartX(width);
+        int buttonY = ToolbarHelper.getButtonY(height);
+        int toolbarEnd = startX + ToolbarHelper.TOOLS.length * ToolbarHelper.BUTTON_SIZE + (ToolbarHelper.TOOLS.length - 1) * ToolbarHelper.BUTTON_SPACING;
+
+        int btnW = 60;
+        int btnH = ToolbarHelper.BUTTON_SIZE;
+        int btnX = toolbarEnd + 15;
+
+        String label = MCity.zoneFillMode ? "Remplir" : "Tile";
+        int color = MCity.zoneFillMode ? 0xFF66CC66 : 0xFF555555;
+
+        dc.fill(btnX, buttonY, btnX + btnW, buttonY + btnH, color);
+        int tw = client.textRenderer.getWidth(label);
+        dc.drawText(client.textRenderer, label, btnX + (btnW - tw) / 2, buttonY + (btnH - 8) / 2, 0xFFFFFFFF, true);
+    }
+
+    private void renderActionPanel(DrawContext dc, MinecraftClient client, int width, int height) {
+        if (MCity.selectedStructure == null) return;
+
+        int[] layout = ToolbarHelper.getActionPanelLayout(width, height);
+        int panelX = layout[0], panelY = layout[1], panelW = layout[2], panelH = layout[3], nbButtons = layout[4];
+
+        // Fond
+        dc.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xDD222222);
+
+        // Nom de la structure au-dessus
+        String name = MCity.selectedStructure.kind.displayName;
+        if (MCity.moveMode) name += " (cliquez pour déplacer)";
+        int nameW = client.textRenderer.getWidth(name);
+        dc.drawText(client.textRenderer, name, panelX + (panelW - nameW) / 2, panelY - 10, 0xFFFFFFFF, true);
+
+        int btnY = panelY + ToolbarHelper.ACTION_PANEL_PADDING;
+        boolean isLine = MCity.selectedStructure.kind.isLine;
+        String[] labels = isLine ? new String[]{"Deplacer", "Supprimer"} : new String[]{"Deplacer", "Tourner", "Supprimer"};
+        int[] colors = isLine ? new int[]{0xFF4488DD, 0xFFDD4444} : new int[]{0xFF4488DD, 0xFFDDAA44, 0xFFDD4444};
+
+        for (int i = 0; i < nbButtons; i++) {
+            int btnX = panelX + ToolbarHelper.ACTION_PANEL_PADDING + i * (ToolbarHelper.ACTION_BTN_WIDTH + ToolbarHelper.ACTION_PANEL_PADDING);
+            dc.fill(btnX, btnY, btnX + ToolbarHelper.ACTION_BTN_WIDTH, btnY + ToolbarHelper.ACTION_BTN_HEIGHT, colors[i]);
+            int tw = client.textRenderer.getWidth(labels[i]);
+            dc.drawText(client.textRenderer, labels[i], btnX + (ToolbarHelper.ACTION_BTN_WIDTH - tw) / 2, btnY + 5, 0xFFFFFFFF, true);
         }
     }
 

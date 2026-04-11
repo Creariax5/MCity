@@ -12,7 +12,6 @@
     "ListenerMixin",
     "KeyboardHandlerMixin",
     "MouseMixin",
-    "RemoveBlockOutline",
     "RemoveHand",
     "RemoveHud",
     "RendererMixin"

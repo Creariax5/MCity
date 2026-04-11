@@ -24,21 +24,26 @@ public class ToolbarHelper {
     public static final int PANEL_ITEM_HEIGHT = 20;
     public static final int PANEL_PADDING = 4;
 
-    // Sous-types Route
-    public static final String[] ROAD_NAMES = {"Chemin", "Route", "Grande route"};
-    public static final int[] ROAD_COLORS = {0xFF665533, 0xFF666666, 0xFF444444};
+    // Sous-types Route (une seule option)
+    public static final String[] ROAD_NAMES = {"Route"};
+    public static final int[] ROAD_COLORS = {0xFF666666};
 
     // Sous-types Zone
-    public static final String[] AREA_NAMES = {"Habitation", "Commerce", "Industrie", "Ferme"};
-    public static final int[] AREA_COLORS = {0xFF44AA44, 0xFF4488DD, 0xFFDDAA44, 0xFF88AA33};
+    public static final String[] AREA_NAMES = {"Habitation", "Commerce", "Industrie", "Dezonnage"};
+    public static final int[] AREA_COLORS = {0xFF44AA44, 0xFF4488DD, 0xFFDDAA44, 0xFF888888};
 
     // Sous-types Eau
     public static final String[] WATER_NAMES = {"Puits", "Canalisation", "Reservoir"};
     public static final int[] WATER_COLORS = {0xFF3377AA, 0xFFCC8844, 0xFF446688};
 
-    // Sous-types Electricit��
+    // Sous-types Electricité
     public static final String[] ELEC_NAMES = {"Generateur", "Cable", "Tour relais"};
     public static final int[] ELEC_COLORS = {0xFFAA3333, 0xFFCC4444, 0xFF884422};
+
+    // Panneau d'action sur structure sélectionnée
+    public static final int ACTION_BTN_WIDTH = 70;
+    public static final int ACTION_BTN_HEIGHT = 18;
+    public static final int ACTION_PANEL_PADDING = 4;
 
     // Positions
     public static int getInfoBarY(int screenHeight) {
@@ -134,6 +139,11 @@ public class ToolbarHelper {
         int width = client.getWindow().getScaledWidth();
         int height = client.getWindow().getScaledHeight();
 
+        // Toggle fill mode (quand AREA est actif)
+        if (MCity.selectedTool == MCity.ToolType.AREA && handleFillModeClick(mouseX, mouseY, width, height)) {
+            return true;
+        }
+
         // Clic sur le panneau en premier
         if (MCity.panelOpen) {
             if (handlePanelClick(mouseX, mouseY, width, height)) {
@@ -150,17 +160,20 @@ public class ToolbarHelper {
                     && mouseY >= buttonY && mouseY <= buttonY + BUTTON_SIZE) {
 
                 if (MCity.selectedTool == TOOLS[i]) {
-                    // Toggle panneau
-                    MCity.panelOpen = !MCity.panelOpen;
-                    if (!MCity.panelOpen) {
-                        MCity.selectedTool = null;
-                        clearAllSubTypes();
-                    }
+                    // Toggle : désélectionner
+                    MCity.panelOpen = false;
+                    MCity.selectedTool = null;
+                    clearAllSubTypes();
                 } else {
-                    // Changer d'outil
                     clearAllSubTypes();
                     MCity.selectedTool = TOOLS[i];
-                    MCity.panelOpen = true;
+                    if (TOOLS[i] == MCity.ToolType.ROAD) {
+                        // Route : auto-sélection (une seule option)
+                        MCity.selectedRoadType = MCity.RoadType.ROAD;
+                        MCity.panelOpen = false;
+                    } else {
+                        MCity.panelOpen = true;
+                    }
                 }
                 return true;
             }
@@ -175,6 +188,21 @@ public class ToolbarHelper {
             return true;
         }
 
+        return false;
+    }
+
+    private static boolean handleFillModeClick(double mouseX, double mouseY, int width, int height) {
+        int startX = getToolbarStartX(width);
+        int buttonY = getButtonY(height);
+        int toolbarEnd = startX + TOOLS.length * BUTTON_SIZE + (TOOLS.length - 1) * BUTTON_SPACING;
+        int btnX = toolbarEnd + 15;
+        int btnW = 60;
+
+        if (mouseX >= btnX && mouseX <= btnX + btnW
+                && mouseY >= buttonY && mouseY <= buttonY + BUTTON_SIZE) {
+            MCity.zoneFillMode = !MCity.zoneFillMode;
+            return true;
+        }
         return false;
     }
 
@@ -238,6 +266,50 @@ public class ToolbarHelper {
             }
         }
 
+        return false;
+    }
+
+    // === Panneau d'action sur structure sélectionnée ===
+
+    public static int[] getActionPanelLayout(int screenWidth, int screenHeight) {
+        // Panneau centré horizontalement, juste au-dessus de la toolbar
+        boolean isLine = MCity.selectedStructure.kind.isLine;
+        int nbButtons = isLine ? 2 : 3; // Move, Rotate (sauf lignes), Delete
+        int panelW = nbButtons * ACTION_BTN_WIDTH + (nbButtons + 1) * ACTION_PANEL_PADDING;
+        int panelH = ACTION_BTN_HEIGHT + 2 * ACTION_PANEL_PADDING;
+        int panelX = (screenWidth - panelW) / 2;
+        int panelY = getToolbarY(screenHeight) - panelH - 5;
+        return new int[]{panelX, panelY, panelW, panelH, nbButtons};
+    }
+
+    public static boolean handleActionPanelClick(double mouseX, double mouseY) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || !MCity.detached || MCity.selectedStructure == null) return false;
+
+        int width = client.getWindow().getScaledWidth();
+        int height = client.getWindow().getScaledHeight();
+        int[] layout = getActionPanelLayout(width, height);
+        int panelX = layout[0], panelY = layout[1], nbButtons = layout[4];
+
+        int btnY = panelY + ACTION_PANEL_PADDING;
+        boolean isLine = MCity.selectedStructure.kind.isLine;
+
+        for (int i = 0; i < nbButtons; i++) {
+            int btnX = panelX + ACTION_PANEL_PADDING + i * (ACTION_BTN_WIDTH + ACTION_PANEL_PADDING);
+            if (mouseX >= btnX && mouseX <= btnX + ACTION_BTN_WIDTH
+                    && mouseY >= btnY && mouseY <= btnY + ACTION_BTN_HEIGHT) {
+                // Order: Move, (Rotate), Delete
+                if (i == 0) {
+                    MCity.moveMode = true;
+                } else if (!isLine && i == 1) {
+                    BuildingPlacer.rotateStructure(MCity.selectedStructure);
+                } else {
+                    BuildingPlacer.deleteStructure(MCity.selectedStructure);
+                    MCity.selectedStructure = null;
+                }
+                return true;
+            }
+        }
         return false;
     }
 }

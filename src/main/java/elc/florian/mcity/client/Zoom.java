@@ -29,7 +29,8 @@ public class Zoom {
         newCam.setPitch(90);
         ground = (int) CustomRayCast.throwRayToCenter().getPos().y;
 
-        speed = speed * (cam.getY()-0)/slowing;
+        double height = Math.max(1, cam.getY() - ground);
+        speed = speed * height / slowing;
 
         Timer timer = new Timer();
 
@@ -63,8 +64,10 @@ public class Zoom {
                 }
                 i++;
                 MCity.cam.setPos(deplacement);
-                double tmpY = abs(deplacement.getY()+dir.getY()* finalVertical);
-                deplacement = new Vec3d(deplacement.getX()+dir.getX()* finalVertical, tmpY, deplacement.getZ()+dir.getZ()* finalVertical);
+                deplacement = new Vec3d(
+                        deplacement.getX() + dir.getX() * finalVertical,
+                        deplacement.getY() + dir.getY() * finalVertical,
+                        deplacement.getZ() + dir.getZ() * finalVertical);
             }
         }, 0, 10);
 
@@ -88,7 +91,8 @@ public class Zoom {
         Vec2f mouseDir = new Vec2f(x, y).normalize();
         mouseDir = Tools.rotateY(mouseDir, toRadians(MCity.cam.getYaw()));
         Vec3d pos = MCity.cam.getPos();
-        mouseDir = mouseDir.multiply((float) ((pos.getY()-0)/60));
+        double height = Math.max(10, pos.getY() - ground);
+        mouseDir = mouseDir.multiply((float) (height / 60));
 
         Vec2f finalMouseDir = mouseDir;
         timer.schedule(new TimerTask() {

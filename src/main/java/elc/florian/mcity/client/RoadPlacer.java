@@ -1,6 +1,10 @@
 package elc.florian.mcity.client;
 
 import elc.florian.mcity.MCity;
+import elc.florian.mcity.structure.PlacedStructure;
+import elc.florian.mcity.structure.StructureKind;
+import elc.florian.mcity.structure.StructureRegistry;
+import elc.florian.mcity.structure.ZoneRegistry;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
@@ -8,32 +12,41 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class RoadPlacer {
 
     public static int getWidth(MCity.RoadType type) {
-        return switch (type) {
-            case PATH -> 2;
-            case ROAD -> 4;
-            case HIGHWAY -> 6;
-        };
+        return MCity.ROAD_WIDTH;
     }
 
     public static BlockState getBlock(MCity.RoadType type) {
-        return switch (type) {
-            case PATH -> Blocks.DIRT_PATH.getDefaultState();
-            case ROAD -> Blocks.COBBLESTONE.getDefaultState();
-            case HIGHWAY -> Blocks.STONE_BRICKS.getDefaultState();
-        };
+        return Blocks.COBBLESTONE.getDefaultState();
     }
 
-    /**
-     * Calcule tous les BlockPos de la route entre 2 points avec une largeur donnée.
-     * La route suit le sol.
-     */
+    private static StructureKind getRoadKind(MCity.RoadType type) {
+        return StructureKind.ROAD_ROAD;
+    }
+
+    /** Longueur euclidienne entre from et to en blocs. */
+    public static double segmentLength(BlockPos from, BlockPos to) {
+        int dx = to.getX() - from.getX();
+        int dz = to.getZ() - from.getZ();
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** Vérifie si une route entre from et to serait valide (longueur mini + pas de collision). */
+    public static boolean isRoadValid(BlockPos from, BlockPos to) {
+        if (from == null || to == null) return false;
+        if (segmentLength(from, to) < MCity.ROAD_MIN_LENGTH) return false;
+        List<BlockPos> blocks = computeRoadBlocks(from, to, MCity.ROAD_WIDTH);
+        return !StructureRegistry.collides(new HashSet<>(blocks));
+    }
+
     public static List<BlockPos> computeRoadBlocks(BlockPos from, BlockPos to, int width) {
-        java.util.Set<Long> seen = new java.util.HashSet<>();
+        Set<Long> seen = new HashSet<>();
         List<BlockPos> blocks = new ArrayList<>();
 
         int dx = to.getX() - from.getX();
@@ -41,11 +54,9 @@ public class RoadPlacer {
         double length = Math.sqrt(dx * dx + dz * dz);
         if (length == 0) length = 1;
 
-        // Plus de pas pour éviter les trous en diagonale
-        int steps = (int) Math.ceil(length * 2);
+        int steps = Math.abs(dx) + Math.abs(dz);
         if (steps == 0) steps = 1;
 
-        // Direction perpendiculaire pour la largeur
         double perpX = -dz / length;
         double perpZ = dx / length;
 
@@ -63,7 +74,7 @@ public class RoadPlacer {
                 if (!seen.add(key)) continue;
 
                 int by = findSurfaceY(bx, bz);
-                if (by > 0) {
+                if (by > -64) {
                     blocks.add(new BlockPos(bx, by, bz));
                 }
             }
@@ -72,79 +83,107 @@ public class RoadPlacer {
         return blocks;
     }
 
-    /**
-     * Trouve le Y de la surface au point donné
-     */
     private static int findSurfaceY(int x, int z) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.world == null) return -1;
-
-        // Chercher du haut vers le bas
         for (int y = 320; y > -64; y--) {
             BlockPos pos = new BlockPos(x, y, z);
-            if (!client.world.getBlockState(pos).isAir()) {
-                return y;
-            }
+            if (!client.world.getBlockState(pos).isAir()) return y;
         }
         return -1;
     }
 
-    /**
-     * Pose la route côté serveur
-     */
-    public static void placeRoad(BlockPos from, BlockPos to, MCity.RoadType type) {
+    private static ServerWorld world() {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.getServer() == null) return;
+        if (client == null || client.getServer() == null) return null;
+        return client.getServer().getOverworld();
+    }
 
-        ServerWorld serverWorld = client.getServer().getOverworld();
-        BlockState block = getBlock(type);
+    public static boolean placeRoad(BlockPos from, BlockPos to, MCity.RoadType type) {
+        ServerWorld world = world();
+        if (world == null) return false;
+
+        if (segmentLength(from, to) < MCity.ROAD_MIN_LENGTH) return false;
+
         int width = getWidth(type);
         List<BlockPos> blocks = computeRoadBlocks(from, to, width);
+        Set<BlockPos> placedBlocks = new HashSet<>(blocks);
 
+        if (StructureRegistry.collides(placedBlocks)) return false;
+
+        PlacedStructure ps = new PlacedStructure();
+        ps.kind = getRoadKind(type);
+        ps.lineFrom = from;
+        ps.lineTo = to;
+
+        BlockState block = getBlock(type);
         for (BlockPos pos : blocks) {
-            serverWorld.setBlockState(pos, block);
+            ps.previousStates.put(pos, world.getBlockState(pos));
+            ps.blocks.add(pos);
+            world.setBlockState(pos, block);
             for (int y = 1; y <= 4; y++) {
                 BlockPos above = pos.up(y);
-                if (!serverWorld.getBlockState(above).isAir()) {
-                    serverWorld.breakBlock(above, false);
-                }
+                if (!world.getBlockState(above).isAir()) world.breakBlock(above, false);
             }
         }
+
+        StructureRegistry.add(ps);
+        ZoneRegistry.markDirty();
+        return true;
     }
 
-    public static void placeCanalisation(BlockPos from, BlockPos to) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.getServer() == null) return;
+    public static boolean placeCanalisation(BlockPos from, BlockPos to) {
+        ServerWorld world = world();
+        if (world == null) return false;
 
-        ServerWorld serverWorld = client.getServer().getOverworld();
+        List<BlockPos> blocks = computeRoadBlocks(from, to, 1);
+        Set<BlockPos> placedBlocks = new HashSet<>(blocks);
+        if (StructureRegistry.collides(placedBlocks)) return false;
+
+        PlacedStructure ps = new PlacedStructure();
+        ps.kind = StructureKind.CANALISATION;
+        ps.lineFrom = from;
+        ps.lineTo = to;
+
         BlockState copper = Blocks.COPPER_BLOCK.getDefaultState();
-        List<BlockPos> blocks = computeRoadBlocks(from, to, 1);
-
         for (BlockPos pos : blocks) {
-            // Remplace le bloc de surface par du cuivre
-            serverWorld.setBlockState(pos, copper);
+            ps.previousStates.put(pos, world.getBlockState(pos));
+            ps.blocks.add(pos);
+            world.setBlockState(pos, copper);
         }
+
+        StructureRegistry.add(ps);
+        return true;
     }
 
-    public static void placeCable(BlockPos from, BlockPos to) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.getServer() == null) return;
+    public static boolean placeCable(BlockPos from, BlockPos to) {
+        ServerWorld world = world();
+        if (world == null) return false;
 
-        ServerWorld serverWorld = client.getServer().getOverworld();
-        BlockState redstone = Blocks.REDSTONE_WIRE.getDefaultState();
         List<BlockPos> blocks = computeRoadBlocks(from, to, 1);
+        Set<BlockPos> wireBlocks = new HashSet<>();
+        for (BlockPos p : blocks) wireBlocks.add(p.up());
 
+        if (StructureRegistry.collides(wireBlocks)) return false;
+
+        PlacedStructure ps = new PlacedStructure();
+        ps.kind = StructureKind.CABLE;
+        ps.lineFrom = from;
+        ps.lineTo = to;
+
+        BlockState redstone = Blocks.REDSTONE_WIRE.getDefaultState();
         for (BlockPos pos : blocks) {
-            // Pose la redstone sur le bloc de surface
-            BlockPos above = pos.up();
-            serverWorld.setBlockState(above, redstone);
-            // Enlever ce qui gêne au-dessus
+            BlockPos wirePos = pos.up();
+            ps.previousStates.put(wirePos, world.getBlockState(wirePos));
+            ps.blocks.add(wirePos);
+            world.setBlockState(wirePos, redstone);
             for (int y = 2; y <= 4; y++) {
                 BlockPos higher = pos.up(y);
-                if (!serverWorld.getBlockState(higher).isAir()) {
-                    serverWorld.breakBlock(higher, false);
-                }
+                if (!world.getBlockState(higher).isAir()) world.breakBlock(higher, false);
             }
         }
+
+        StructureRegistry.add(ps);
+        return true;
     }
 }

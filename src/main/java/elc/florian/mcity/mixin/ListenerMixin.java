@@ -36,8 +36,6 @@ public interface ListenerMixin extends Navigable {
             while (ground + 2 >= newCam.getPos().getY()) {
                 newCam.setPos(new Vec3d(newCam.getPos().getX(), newCam.getPos().getY() + 1, newCam.getPos().getZ()));
                 ground = (int) CustomRayCast.throwRayToCenter().getPos().y;
-                System.out.println(newCam.getPos().getY());
-                System.out.println("ground: " + ground + 2);
             }
             MCity.cam.setPos(newCam.getPos());
 

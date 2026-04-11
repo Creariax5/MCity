@@ -4,6 +4,11 @@ import elc.florian.mcity.client.Camera;
 import elc.florian.mcity.client.Keybindings;
 import elc.florian.mcity.item.ModItem;
 import elc.florian.mcity.item.ModItemGroups;
+import elc.florian.mcity.structure.PlacedStructure;
+import elc.florian.mcity.structure.StructureRegistry;
+import elc.florian.mcity.structure.ZoneRegistry;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.minecraft.util.WorldSavePath;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.util.math.BlockPos;
@@ -15,18 +20,18 @@ import java.util.ArrayList;
 
 public class MCity implements ModInitializer {
 	public static final String MOD_ID = "mcity";
-    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-	public static ArrayList<KeyBinding> keyBinding = new ArrayList<>();
-	public static boolean detached = false;
-	public static boolean mouse_middle_pressed = false;
-	public static Camera cam = new Camera(new Vec3d(0.0, 100.0, 0.0));
+	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+	// === Tool types ===
 	public enum ToolType { ROAD, AREA, WATER, ELECTRICITY }
-	public enum RoadType { PATH, ROAD, HIGHWAY }
-	public enum AreaType { HABITATION, COMMERCE, INDUSTRIE, FERME }
+	public enum RoadType { ROAD }
+	public static final int ROAD_WIDTH = 8;
+	public static final int ROAD_MIN_LENGTH = 16;
+	public enum AreaType { HABITATION, COMMERCE, INDUSTRIE, DEZONNAGE }
 	public enum WaterType { PUITS, CANALISATION, RESERVOIR }
 	public enum ElectricityType { GENERATEUR, CABLE, TOUR_RELAIS }
 
+	// === Tool state ===
 	public static ToolType selectedTool = null;
 	public static RoadType selectedRoadType = null;
 	public static AreaType selectedAreaType = null;
@@ -35,21 +40,51 @@ public class MCity implements ModInitializer {
 	public static boolean panelOpen = false;
 	public static BlockPos lineFirstPoint = null;
 
-	// Simulation
+	// === Sélection/édition de structures ===
+	public static PlacedStructure selectedStructure = null;
+	public static boolean moveMode = false;
+
+	// === Zones ===
+	public static boolean zoneFillMode = false; // false=tile, true=remplir
+
+	// === Camera state ===
+	public static boolean detached = false;
+	public static Camera cam = new Camera(new Vec3d(0.0, 100.0, 0.0));
+	public static ArrayList<KeyBinding> keyBinding = new ArrayList<>();
+
+	// === Mouse state ===
+	public static boolean mouse_middle_pressed = false;
+	public static double lastX, lastY;
+	public static double mouseX, mouseY;
+	public static boolean newDeplace;
+	public static boolean mouseMoving;
+
+	// === Keyboard state ===
+	public static boolean keyW_pressed = false;
+	public static boolean keyA_pressed = false;
+	public static boolean keyS_pressed = false;
+	public static boolean keyD_pressed = false;
+
+	public static boolean isKeyMoving() {
+		return keyW_pressed || keyA_pressed || keyS_pressed || keyD_pressed;
+	}
+
+	// === Simulation ===
 	public static boolean paused = false;
-	public static int gameSpeed = 1; // 0=pause, 1=x1, 2=x2, 3=x3
+	public static int gameSpeed = 1;
 	public static int gameDay = 1;
 	public static int gameMonth = 1;
 	public static int gameYear = 1;
 	public static long money = 10000;
-	public static int demandResidential = 50;  // 0-100
-	public static int demandCommercial = 30;   // 0-100
-	public static int demandIndustrial = 40;   // 0-100
-	public static int happiness = 70;          // 0-100
+	public static int demandResidential = 50;
+	public static int demandCommercial = 30;
+	public static int demandIndustrial = 40;
+	public static int happiness = 70;
 	public static int population = 0;
+
 	public static long lastTickTime = 0;
-	public static long tickAccumulator = 0;
-	private static final long TICK_INTERVAL_MS = 2000; // 1 jour toutes les 2 secondes à x1
+	private static long tickAccumulator = 0;
+	private static final long TICK_INTERVAL_MS = 2000;
 
 	public static void tickSimulation() {
 		if (paused || gameSpeed == 0) return;
@@ -79,7 +114,6 @@ public class MCity implements ModInitializer {
 				gameYear++;
 			}
 		}
-		// Placeholder: léger revenu par jour
 		money += 10;
 	}
 
@@ -101,33 +135,23 @@ public class MCity implements ModInitializer {
 		return String.format("%,d hab.", population);
 	}
 
-	public static double lastX;
-	public static double lastY;
-	public static double mouseX;
-	public static double mouseY;
-	public static boolean newDeplace;
-	public static boolean mouseMoving;
-
-	public static boolean keyW_pressed = false;
-	public static boolean keyA_pressed = false;
-	public static boolean keyS_pressed = false;
-	public static boolean keyD_pressed = false;
-
-	public static boolean isKeyMoving() {
-		return keyW_pressed || keyA_pressed || keyS_pressed || keyD_pressed;
-	}
-
 	@Override
 	public void onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
-
-		LOGGER.info("Hello Fabric world!");
-
+		LOGGER.info("MCity loading...");
 		ModItem.registerModItems();
 		ModItemGroups.registerItemGroups();
-
 		Keybindings.registerKeybindings();
+
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+			java.nio.file.Path root = server.getSavePath(WorldSavePath.ROOT);
+			StructureRegistry.load(root.resolve("mcity_structures.json"));
+			ZoneRegistry.load(root.resolve("mcity_zones.json"));
+			ZoneRegistry.markDirty();
+		});
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+			java.nio.file.Path root = server.getSavePath(WorldSavePath.ROOT);
+			StructureRegistry.save(root.resolve("mcity_structures.json"));
+			ZoneRegistry.save(root.resolve("mcity_zones.json"));
+		});
 	}
 }
