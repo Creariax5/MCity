@@ -1,4 +1,6 @@
 package elc.florian.mcity.client;
+import elc.florian.mcity.state.CameraState;
+
 
 import elc.florian.mcity.MCity;
 import net.minecraft.block.Block;
@@ -41,7 +43,7 @@ public class CustomRayCast {
         boolean includeFluids = false; //Whether to detect fluids as blocks
 
         assert client.cameraEntity != null;
-        HitResult hit = raycast(MCity.cam, client.cameraEntity, maxReach, includeFluids);
+        HitResult hit = raycast(CameraState.cam, client.cameraEntity, maxReach, includeFluids);
 
         switch(hit.getType()) {
             case MISS:
@@ -69,15 +71,15 @@ public class CustomRayCast {
         double angleSize = fov/height;
 
         //rot vec things
-        Vector3f verticalRotationAxis = new Vector3f(MCity.cam.getDir().toVector3f());
+        Vector3f verticalRotationAxis = new Vector3f(CameraState.cam.getDir().toVector3f());
         verticalRotationAxis.cross(new Vector3f(0, 1, 0));
         verticalRotationAxis.normalize();
 
-        Vector3f horizontalRotationAxis = new Vector3f(MCity.cam.getDir().toVector3f());
+        Vector3f horizontalRotationAxis = new Vector3f(CameraState.cam.getDir().toVector3f());
         horizontalRotationAxis.cross(verticalRotationAxis);
         horizontalRotationAxis.normalize();
 
-        verticalRotationAxis = new Vector3f(MCity.cam.getDir().toVector3f());
+        verticalRotationAxis = new Vector3f(CameraState.cam.getDir().toVector3f());
         verticalRotationAxis.cross(horizontalRotationAxis);
         //rot vec things
 
@@ -85,7 +87,7 @@ public class CustomRayCast {
         float horizontalRotation = (float) toRadians((x - width/2f) * angleSize);
         float verticalRotation = (float) toRadians((y - height/2f) * angleSize);
 
-        final Vector3f temp2 = new Vector3f(MCity.cam.getDir().toVector3f());
+        final Vector3f temp2 = new Vector3f(CameraState.cam.getDir().toVector3f());
         temp2.rotate((new Quaternionf()).setAngleAxis(verticalRotation, verticalRotationAxis.x, verticalRotationAxis.y, verticalRotationAxis.z));
         temp2.rotate((new Quaternionf()).setAngleAxis(horizontalRotation, horizontalRotationAxis.x, horizontalRotationAxis.y, horizontalRotationAxis.z));
         //quaternions things
@@ -99,7 +101,7 @@ public class CustomRayCast {
         int maxReach = 1000; //The farthest target the cameraEntity can detect
         boolean includeFluids = false; //Whether to detect fluids as blocks
 
-        Camera newCam = new Camera(MCity.cam);
+        Camera newCam = new Camera(CameraState.cam);
         newCam.setDir(newRotCam(client, x, y));
 
         assert client.cameraEntity != null;

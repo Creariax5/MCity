@@ -1,4 +1,6 @@
 package elc.florian.mcity.client;
+import elc.florian.mcity.state.Tools;
+
 
 import elc.florian.mcity.MCity;
 import elc.florian.mcity.structure.PlacedStructure;
@@ -28,8 +30,8 @@ public class RoadPlacer {
     /** Vérifie si une route entre from et to serait valide (longueur mini + pas de collision). */
     public static boolean isRoadValid(BlockPos from, BlockPos to) {
         if (from == null || to == null) return false;
-        if (segmentLength(from, to) < MCity.ROAD_MIN_LENGTH) return false;
-        List<BlockPos> blocks = computeRoadBlocks(from, to, MCity.ROAD_WIDTH);
+        if (segmentLength(from, to) < Tools.ROAD_MIN_LENGTH) return false;
+        List<BlockPos> blocks = computeRoadBlocks(from, to, Tools.ROAD_WIDTH);
         return !StructureRegistry.collides(new HashSet<>(blocks));
     }
 
@@ -91,9 +93,9 @@ public class RoadPlacer {
         ServerWorld world = world();
         if (world == null) return false;
 
-        if (segmentLength(from, to) < MCity.ROAD_MIN_LENGTH) return false;
+        if (segmentLength(from, to) < Tools.ROAD_MIN_LENGTH) return false;
 
-        List<BlockPos> blocks = computeRoadBlocks(from, to, MCity.ROAD_WIDTH);
+        List<BlockPos> blocks = computeRoadBlocks(from, to, Tools.ROAD_WIDTH);
         Set<BlockPos> placedBlocks = new HashSet<>(blocks);
 
         if (StructureRegistry.collides(placedBlocks)) return false;

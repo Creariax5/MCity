@@ -9,9 +9,6 @@ import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 
 public class StructureRegistry {
@@ -96,44 +93,38 @@ public class StructureRegistry {
 
     // === Persistance ===
 
-    public static void save(Path file) {
-        try {
-            Files.createDirectories(file.getParent());
-            JsonArray arr = new JsonArray();
-            for (PlacedStructure s : structures) {
-                JsonObject o = new JsonObject();
-                o.addProperty("id", s.id);
-                o.addProperty("kind", s.kind.name());
-                o.addProperty("rotation", s.rotation);
-                if (s.origin != null) o.add("origin", posToJson(s.origin));
-                if (s.lineFrom != null) o.add("lineFrom", posToJson(s.lineFrom));
-                if (s.lineTo != null) o.add("lineTo", posToJson(s.lineTo));
-                JsonArray prevStates = new JsonArray();
-                for (Map.Entry<BlockPos, BlockState> e : s.previousStates.entrySet()) {
-                    JsonObject entry = new JsonObject();
-                    entry.add("pos", posToJson(e.getKey()));
-                    entry.addProperty("block", Registries.BLOCK.getId(e.getValue().getBlock()).toString());
-                    prevStates.add(entry);
-                }
-                o.add("previousStates", prevStates);
-                arr.add(o);
+    public static String toJson() {
+        JsonArray arr = new JsonArray();
+        for (PlacedStructure s : structures) {
+            JsonObject o = new JsonObject();
+            o.addProperty("id", s.id);
+            o.addProperty("kind", s.kind.name());
+            o.addProperty("rotation", s.rotation);
+            if (s.origin != null) o.add("origin", posToJson(s.origin));
+            if (s.lineFrom != null) o.add("lineFrom", posToJson(s.lineFrom));
+            if (s.lineTo != null) o.add("lineTo", posToJson(s.lineTo));
+            JsonArray prevStates = new JsonArray();
+            for (Map.Entry<BlockPos, BlockState> e : s.previousStates.entrySet()) {
+                JsonObject entry = new JsonObject();
+                entry.add("pos", posToJson(e.getKey()));
+                entry.addProperty("block", Registries.BLOCK.getId(e.getValue().getBlock()).toString());
+                prevStates.add(entry);
             }
-            JsonObject root = new JsonObject();
-            root.add("structures", arr);
-            root.addProperty("nextId", nextId);
-            Files.writeString(file, new GsonBuilder().create().toJson(root));
-            MCity.LOGGER.info("Saved " + structures.size() + " structures to " + file);
-        } catch (IOException e) {
-            MCity.LOGGER.error("Failed to save structures", e);
+            o.add("previousStates", prevStates);
+            arr.add(o);
         }
+        JsonObject root = new JsonObject();
+        root.add("structures", arr);
+        root.addProperty("nextId", nextId);
+        return new GsonBuilder().create().toJson(root);
     }
 
-    public static void load(Path file) {
+    public static void fromJson(String content) {
         clear();
-        if (!Files.exists(file)) return;
+        if (content == null || content.isBlank()) return;
         try {
-            String content = Files.readString(file);
             JsonObject root = JsonParser.parseString(content).getAsJsonObject();
+            if (!root.has("structures")) return;
             JsonArray arr = root.getAsJsonArray("structures");
             for (JsonElement el : arr) {
                 JsonObject o = el.getAsJsonObject();
@@ -142,7 +133,7 @@ public class StructureRegistry {
                 try {
                     s.kind = StructureKind.valueOf(o.get("kind").getAsString());
                 } catch (IllegalArgumentException ex) {
-                    continue; // type disparu (ex: HABITATION enlevé)
+                    continue; // type disparu
                 }
                 s.rotation = o.get("rotation").getAsInt();
                 if (o.has("origin")) s.origin = posFromJson(o.getAsJsonArray("origin"));
@@ -157,18 +148,13 @@ public class StructureRegistry {
                         s.previousStates.put(pos, state);
                         s.blocks.add(pos);
                     }
-                } else {
-                    for (JsonElement be : o.getAsJsonArray("blocks")) {
-                        s.blocks.add(posFromJson(be.getAsJsonArray()));
-                    }
                 }
                 structures.add(s);
                 indexStructure(s);
             }
             nextId = root.has("nextId") ? root.get("nextId").getAsInt() : structures.size();
-            MCity.LOGGER.info("Loaded " + structures.size() + " structures from " + file);
         } catch (Exception e) {
-            MCity.LOGGER.error("Failed to load structures", e);
+            MCity.LOGGER.error("Failed to parse structures JSON", e);
         }
     }
 

@@ -1,4 +1,7 @@
 package elc.florian.mcity.mixin;
+import elc.florian.mcity.state.InputState;
+import elc.florian.mcity.state.CameraState;
+
 
 import elc.florian.mcity.MCity;
 import elc.florian.mcity.client.Camera;
@@ -19,17 +22,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public interface ListenerMixin extends Navigable {
     @Inject(at = @At("HEAD"), method = "mouseMoved(DD)V")
     private void onMouseMoved(double x, double y, CallbackInfo ci) {
-        if (!MCity.detached) {
+        if (!CameraState.detached) {
             return;
         }
-        MCity.mouseX = x;
-        MCity.mouseY = y;
+        InputState.mouseX = x;
+        InputState.mouseY = y;
 
         if (Zoom.mouseAtBorder(x, y)) {
             Zoom.setX((float) (x - MinecraftClient.getInstance().getWindow().getWidth() / 4));
             Zoom.setY((float) (y - MinecraftClient.getInstance().getWindow().getHeight() / 4));
 
-            Camera newCam = new Camera(MCity.cam);
+            Camera newCam = new Camera(CameraState.cam);
             newCam.setPitch(90);
             int ground = (int) CustomRayCast.throwRayToCenter().getPos().y;
 
@@ -37,38 +40,38 @@ public interface ListenerMixin extends Navigable {
                 newCam.setPos(new Vec3d(newCam.getPos().getX(), newCam.getPos().getY() + 1, newCam.getPos().getZ()));
                 ground = (int) CustomRayCast.throwRayToCenter().getPos().y;
             }
-            MCity.cam.setPos(newCam.getPos());
+            CameraState.cam.setPos(newCam.getPos());
 
-            if (!MCity.mouseMoving) {
-                MCity.mouseMoving = true;
+            if (!InputState.mouseMoving) {
+                InputState.mouseMoving = true;
 
                 Zoom.move();
             }
         } else {
-            MCity.mouseMoving = false;
+            InputState.mouseMoving = false;
         }
 
-        if (MCity.mouseMiddlePressed) {
+        if (InputState.mouseMiddlePressed) {
 
-            if (MCity.newDragStart) {
-                MCity.lastX = x;
-                MCity.lastY = y;
-                MCity.newDragStart = false;
+            if (InputState.newDragStart) {
+                InputState.lastX = x;
+                InputState.lastY = y;
+                InputState.newDragStart = false;
 
             }
             double moveX;
             double moveY;
 
-            moveX = x - MCity.lastX;
-            moveY = y - MCity.lastY;
+            moveX = x - InputState.lastX;
+            moveY = y - InputState.lastY;
 
-            MCity.lastX = x;
-            MCity.lastY = y;
+            InputState.lastX = x;
+            InputState.lastY = y;
 
-            MCity.cam.setYaw((float) (MCity.cam.getYaw() + moveX));
-            MCity.cam.setPitch((float) (MCity.cam.getPitch() + moveY));
+            CameraState.cam.setYaw((float) (CameraState.cam.getYaw() + moveX));
+            CameraState.cam.setPitch((float) (CameraState.cam.getPitch() + moveY));
 
-            MCity.cam.updateDir();
+            CameraState.cam.updateDir();
         }
     }
 }

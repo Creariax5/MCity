@@ -1,4 +1,6 @@
 package elc.florian.mcity.gui;
+import elc.florian.mcity.state.CameraState;
+
 
 import elc.florian.mcity.MCity;
 import net.minecraft.client.gui.DrawContext;
@@ -16,7 +18,7 @@ public class EditingGUI extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == GLFW.GLFW_KEY_F6 || keyCode == GLFW.GLFW_KEY_ESCAPE) {
             this.close();
-            MCity.detached = !MCity.detached;
+            CameraState.detached = !CameraState.detached;
             return true;
         }
 

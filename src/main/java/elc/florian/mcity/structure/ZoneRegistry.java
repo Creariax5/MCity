@@ -1,12 +1,11 @@
 package elc.florian.mcity.structure;
+import elc.florian.mcity.state.Tools;
+
 
 import com.google.gson.*;
 import elc.florian.mcity.MCity;
 import net.minecraft.util.math.BlockPos;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 
 public class ZoneRegistry {
@@ -14,7 +13,7 @@ public class ZoneRegistry {
     public static final int MAX_TILE_DISTANCE = 4; // tiles autour d'une route
 
     // tileKey → AreaType
-    private static final Map<Long, MCity.AreaType> zonedTiles = new HashMap<>();
+    private static final Map<Long, Tools.AreaType> zonedTiles = new HashMap<>();
 
     // Cache des tiles plaçables (recalculé à la demande)
     private static Set<Long> placeableCache = null;
@@ -35,15 +34,15 @@ public class ZoneRegistry {
         return Math.floorDiv(blockCoord, TILE_SIZE);
     }
 
-    public static Map<Long, MCity.AreaType> allZones() {
+    public static Map<Long, Tools.AreaType> allZones() {
         return zonedTiles;
     }
 
-    public static MCity.AreaType getZone(int tileX, int tileZ) {
+    public static Tools.AreaType getZone(int tileX, int tileZ) {
         return zonedTiles.get(tileKey(tileX, tileZ));
     }
 
-    public static void setZone(int tileX, int tileZ, MCity.AreaType type) {
+    public static void setZone(int tileX, int tileZ, Tools.AreaType type) {
         if (!isPlaceable(tileX, tileZ)) return;
         zonedTiles.put(tileKey(tileX, tileZ), type);
     }
@@ -158,7 +157,7 @@ public class ZoneRegistry {
     }
 
     /** Flood-fill depuis une tile sur toutes les tiles plaçables connectées. */
-    public static void floodFill(int startTileX, int startTileZ, MCity.AreaType type) {
+    public static void floodFill(int startTileX, int startTileZ, Tools.AreaType type) {
         Set<Long> placeable = getPlaceableTiles();
         long start = tileKey(startTileX, startTileZ);
         if (!placeable.contains(start)) return;
@@ -193,43 +192,36 @@ public class ZoneRegistry {
 
     // === Persistance ===
 
-    public static void save(Path file) {
-        try {
-            Files.createDirectories(file.getParent());
-            JsonArray arr = new JsonArray();
-            for (Map.Entry<Long, MCity.AreaType> e : zonedTiles.entrySet()) {
-                JsonObject o = new JsonObject();
-                o.addProperty("tx", tileX(e.getKey()));
-                o.addProperty("tz", tileZ(e.getKey()));
-                o.addProperty("type", e.getValue().name());
-                arr.add(o);
-            }
-            Files.writeString(file, new GsonBuilder().create().toJson(arr));
-            MCity.LOGGER.info("Saved " + zonedTiles.size() + " zones to " + file);
-        } catch (IOException e) {
-            MCity.LOGGER.error("Failed to save zones", e);
+    public static String toJson() {
+        JsonArray arr = new JsonArray();
+        for (Map.Entry<Long, Tools.AreaType> e : zonedTiles.entrySet()) {
+            JsonObject o = new JsonObject();
+            o.addProperty("tx", tileX(e.getKey()));
+            o.addProperty("tz", tileZ(e.getKey()));
+            o.addProperty("type", e.getValue().name());
+            arr.add(o);
         }
+        return new GsonBuilder().create().toJson(arr);
     }
 
-    public static void load(Path file) {
+    public static void fromJson(String content) {
         clear();
-        if (!Files.exists(file)) return;
+        if (content == null || content.isBlank()) return;
         try {
-            JsonArray arr = JsonParser.parseString(Files.readString(file)).getAsJsonArray();
+            JsonArray arr = JsonParser.parseString(content).getAsJsonArray();
             for (JsonElement el : arr) {
                 JsonObject o = el.getAsJsonObject();
                 int tx = o.get("tx").getAsInt();
                 int tz = o.get("tz").getAsInt();
                 try {
-                    MCity.AreaType type = MCity.AreaType.valueOf(o.get("type").getAsString());
+                    Tools.AreaType type = Tools.AreaType.valueOf(o.get("type").getAsString());
                     zonedTiles.put(tileKey(tx, tz), type);
                 } catch (IllegalArgumentException ignored) {
-                    // Type inconnu (ex: FERME supprimée) — on skip
+                    // Type inconnu — skip
                 }
             }
-            MCity.LOGGER.info("Loaded " + zonedTiles.size() + " zones from " + file);
         } catch (Exception e) {
-            MCity.LOGGER.error("Failed to load zones", e);
+            MCity.LOGGER.error("Failed to parse zones JSON", e);
         }
     }
 }

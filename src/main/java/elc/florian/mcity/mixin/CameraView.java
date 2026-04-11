@@ -1,4 +1,6 @@
 package elc.florian.mcity.mixin;
+import elc.florian.mcity.state.CameraState;
+
 
 import com.llamalad7.mixinextras.sugar.Local;
 import elc.florian.mcity.MCity;
@@ -19,10 +21,10 @@ public abstract class CameraView {
     }
     @Inject(method = "update(Lnet/minecraft/world/BlockView;Lnet/minecraft/entity/Entity;ZZF)V", at = @At("TAIL"))
     private void injected(CallbackInfo ci, @Local(ordinal = 1, argsOnly = true) boolean inverseView) {
-        if (MCity.detached) {
-            Vec3d cam = MCity.cam.getPos();
+        if (CameraState.detached) {
+            Vec3d cam = CameraState.cam.getPos();
 
-            this.setRotation(MCity.cam.getYaw(), MCity.cam.getPitch());
+            this.setRotation(CameraState.cam.getYaw(), CameraState.cam.getPitch());
             this.setPos(cam.x, cam.y, cam.z);
             this.moveBy((float) (this.getPos().z-cam.z), (float) (this.getPos().y-cam.y), (float) (this.getPos().x-cam.x));
 

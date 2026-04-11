@@ -1,8 +1,7 @@
 package elc.florian.mcity.client;
 
-import elc.florian.mcity.MCity;
-import elc.florian.mcity.mixin.ListenerMixin;
-import elc.florian.mcity.utils.Tools;
+import elc.florian.mcity.state.CameraState;
+import elc.florian.mcity.state.InputState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
@@ -10,7 +9,6 @@ import net.minecraft.util.math.Vec3d;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import static java.lang.Math.abs;
 import static java.lang.Math.toRadians;
 
 public class Zoom {
@@ -18,14 +16,20 @@ public class Zoom {
     static int ground = 60;
     static int slowing = 3;
 
+    private static Vec2f rotateY(Vec2f vector, double angle) {
+        float x1 = (float) (vector.x * Math.cos(angle) - vector.y * Math.sin(angle));
+        float y1 = (float) (vector.x * Math.sin(angle) + vector.y * Math.cos(angle));
+        return new Vec2f(x1, y1);
+    }
+
     public static void zoom(double speed) {
-        MCity.cam.setSpeed(0);
-        MCity.cam.setZooming(true);
+        CameraState.cam.setSpeed(0);
+        CameraState.cam.setZooming(true);
 
-        Vec3d cam = MCity.cam.getPos();
-        Vec3d dir = MCity.cam.getDir();
+        Vec3d cam = CameraState.cam.getPos();
+        Vec3d dir = CameraState.cam.getDir();
 
-        Camera newCam = new Camera(MCity.cam);
+        Camera newCam = new Camera(CameraState.cam);
         newCam.setPitch(90);
         ground = (int) CustomRayCast.throwRayToCenter().getPos().y;
 
@@ -41,9 +45,9 @@ public class Zoom {
             @Override
             public void run() {
                 if (i == fluidite) {
-                    MCity.cam.setZooming(false);
-                    if (MCity.cam.getSpeed() != 0) {
-                        zoom(MCity.cam.getSpeed());
+                    CameraState.cam.setZooming(false);
+                    if (CameraState.cam.getSpeed() != 0) {
+                        zoom(CameraState.cam.getSpeed());
 
                     }
                     timer.cancel();
@@ -51,19 +55,19 @@ public class Zoom {
 
                 }
                 if (deplacement.y<ground+3 && finalVertical > 0) {
-                    MCity.cam.setSpeed(0);
-                    MCity.cam.setZooming(false);
+                    CameraState.cam.setSpeed(0);
+                    CameraState.cam.setZooming(false);
                     timer.cancel();
                     return;
                 }
                 if (deplacement.y>ground+10000 && finalVertical < 0) {
-                    MCity.cam.setSpeed(0);
-                    MCity.cam.setZooming(false);
+                    CameraState.cam.setSpeed(0);
+                    CameraState.cam.setZooming(false);
                     timer.cancel();
                     return;
                 }
                 i++;
-                MCity.cam.setPos(deplacement);
+                CameraState.cam.setPos(deplacement);
                 deplacement = new Vec3d(
                         deplacement.getX() + dir.getX() * finalVertical,
                         deplacement.getY() + dir.getY() * finalVertical,
@@ -89,8 +93,8 @@ public class Zoom {
         Timer timer = new Timer();
 
         Vec2f mouseDir = new Vec2f(x, y).normalize();
-        mouseDir = Tools.rotateY(mouseDir, toRadians(MCity.cam.getYaw()));
-        Vec3d pos = MCity.cam.getPos();
+        mouseDir = rotateY(mouseDir, toRadians(CameraState.cam.getYaw()));
+        Vec3d pos = CameraState.cam.getPos();
         double height = Math.max(10, pos.getY() - ground);
         mouseDir = mouseDir.multiply((float) (height / 60));
 
@@ -98,9 +102,9 @@ public class Zoom {
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                MCity.cam.setPos(new Vec3d(pos.getX() - finalMouseDir.x, pos.getY(), pos.getZ() - finalMouseDir.y));
+                CameraState.cam.setPos(new Vec3d(pos.getX() - finalMouseDir.x, pos.getY(), pos.getZ() - finalMouseDir.y));
 
-                if (MCity.mouseMoving || MCity.isKeyMoving()) {
+                if (InputState.mouseMoving || InputState.isKeyMoving()) {
                     move();
                 }
             }

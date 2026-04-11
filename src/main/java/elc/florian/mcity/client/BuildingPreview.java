@@ -1,4 +1,8 @@
 package elc.florian.mcity.client;
+import elc.florian.mcity.state.Tools;
+import elc.florian.mcity.state.InputState;
+import elc.florian.mcity.state.CameraState;
+
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import elc.florian.mcity.MCity;
@@ -43,36 +47,34 @@ public class BuildingPreview {
     private static final float[] ZONE_INDUSTRIE  = {0.9f, 0.8f, 0.3f, 0.35f};
 
     public static void render(WorldRenderContext context) {
-        if (!MCity.detached) return;
+        if (!CameraState.detached) return;
 
-        if (MCity.selectedStructure != null) {
+        if (Tools.selectedStructure != null) {
             renderHighlight(context);
         }
 
-        // Grille de zones visible en mode AREA
-        if (MCity.selectedTool == MCity.ToolType.AREA) {
+        if (Tools.selectedTool == Tools.ToolType.AREA) {
             renderZoneGrid(context);
         }
 
-        if (MCity.selectedTool == MCity.ToolType.ROAD && MCity.selectedRoadType != null) {
-            renderLinePreview(context, ROAD_COLOR, MCity.ROAD_WIDTH, true);
-        } else if (MCity.selectedTool == MCity.ToolType.WATER && MCity.selectedWaterType != null) {
-            if (MCity.selectedWaterType == MCity.WaterType.CANALISATION) {
-                renderLinePreview(context, COPPER_COLOR, 1, false);
-            } else {
-                renderSimplePreview(context, WATER_COLOR);
-            }
-        } else if (MCity.selectedTool == MCity.ToolType.ELECTRICITY && MCity.selectedElectricityType != null) {
-            if (MCity.selectedElectricityType == MCity.ElectricityType.CABLE) {
-                renderLinePreview(context, REDSTONE_COLOR, 1, false);
-            } else {
-                renderSimplePreview(context, ELEC_COLOR);
-            }
+        if (Tools.selectedSubType == null) return;
+
+        // Pour AREA on n'affiche pas de preview de placement (juste la grille gérée plus haut)
+        if (Tools.selectedTool == Tools.ToolType.AREA) return;
+
+        if (Tools.selectedTool == Tools.ToolType.ROAD) {
+            renderLinePreview(context, ROAD_COLOR, Tools.ROAD_WIDTH, true);
+        } else if (Tools.selectedSubType.isLine()) {
+            float[] color = Tools.selectedTool == Tools.ToolType.WATER ? COPPER_COLOR : REDSTONE_COLOR;
+            renderLinePreview(context, color, 1, false);
+        } else {
+            float[] color = Tools.selectedTool == Tools.ToolType.WATER ? WATER_COLOR : ELEC_COLOR;
+            renderSimplePreview(context, color);
         }
     }
 
     private static void renderHighlight(WorldRenderContext context) {
-        elc.florian.mcity.structure.PlacedStructure s = MCity.selectedStructure;
+        elc.florian.mcity.structure.PlacedStructure s = Tools.selectedStructure;
         if (s == null || s.blocks.isEmpty()) return;
 
         MatrixStack matrices = context.matrixStack();
@@ -97,7 +99,7 @@ public class BuildingPreview {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.world == null) return;
 
-        HitResult hit = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
+        HitResult hit = CustomRayCast.throwRay((int) InputState.mouseX, (int) InputState.mouseY);
         if (hit == null || hit.getType() != HitResult.Type.BLOCK) return;
 
         BlockHitResult blockHit = (BlockHitResult) hit;
@@ -112,19 +114,19 @@ public class BuildingPreview {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
 
-        if (MCity.lineFirstPoint != null) {
-            List<BlockPos> blocks = RoadPlacer.computeRoadBlocks(MCity.lineFirstPoint, mousePos, width);
+        if (Tools.lineFirstPoint != null) {
+            List<BlockPos> blocks = RoadPlacer.computeRoadBlocks(Tools.lineFirstPoint, mousePos, width);
 
             float[] drawColor = color;
             if (canValidate) {
-                boolean valid = RoadPlacer.isRoadValid(MCity.lineFirstPoint, mousePos);
+                boolean valid = RoadPlacer.isRoadValid(Tools.lineFirstPoint, mousePos);
                 if (!valid) drawColor = INVALID_COLOR;
             }
 
             for (BlockPos pos : blocks) {
                 drawFlatBlock(buffer, posMatrix, pos.getX(), pos.getY(), pos.getZ(), drawColor);
             }
-            drawBlock(buffer, posMatrix, MCity.lineFirstPoint.getX(), MCity.lineFirstPoint.getY(), MCity.lineFirstPoint.getZ(), MARKER_COLOR);
+            drawBlock(buffer, posMatrix, Tools.lineFirstPoint.getX(), Tools.lineFirstPoint.getY(), Tools.lineFirstPoint.getZ(), MARKER_COLOR);
         } else {
             drawBlock(buffer, posMatrix, mousePos.getX(), mousePos.getY(), mousePos.getZ(), MARKER_COLOR);
         }
@@ -137,7 +139,7 @@ public class BuildingPreview {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.world == null) return;
 
-        HitResult hit = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
+        HitResult hit = CustomRayCast.throwRay((int) InputState.mouseX, (int) InputState.mouseY);
         if (hit == null || hit.getType() != HitResult.Type.BLOCK) return;
 
         BlockHitResult blockHit = (BlockHitResult) hit;
@@ -164,7 +166,7 @@ public class BuildingPreview {
         endRender(buffer, matrices);
     }
 
-    private static float[] getZoneColor(MCity.AreaType type) {
+    private static float[] getZoneColor(Tools.AreaType type) {
         return switch (type) {
             case HABITATION -> ZONE_HABITATION;
             case COMMERCE -> ZONE_COMMERCE;
@@ -181,7 +183,7 @@ public class BuildingPreview {
         if (placeable.isEmpty() && ZoneRegistry.allZones().isEmpty()) return;
 
         // Y au niveau de la souris (approximatif — sol au niveau du bloc pointé)
-        HitResult hit = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
+        HitResult hit = CustomRayCast.throwRay((int) InputState.mouseX, (int) InputState.mouseY);
         int y = (hit != null && hit.getType() == HitResult.Type.BLOCK)
                 ? ((BlockHitResult) hit).getBlockPos().getY() + 1
                 : 64;
@@ -207,7 +209,7 @@ public class BuildingPreview {
         }
 
         // Tiles zonées : couleur pleine
-        for (java.util.Map.Entry<Long, MCity.AreaType> e : ZoneRegistry.allZones().entrySet()) {
+        for (java.util.Map.Entry<Long, Tools.AreaType> e : ZoneRegistry.allZones().entrySet()) {
             int tx = ZoneRegistry.tileX(e.getKey());
             int tz = ZoneRegistry.tileZ(e.getKey());
             float x0 = tx * tileSize;

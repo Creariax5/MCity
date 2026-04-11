@@ -1,4 +1,6 @@
 package elc.florian.mcity.client;
+import elc.florian.mcity.state.CameraState;
+
 
 import elc.florian.mcity.MCity;
 import elc.florian.mcity.gui.EditingGUI;
@@ -10,7 +12,7 @@ import net.minecraft.util.math.Vec3d;
 import org.lwjgl.glfw.GLFW;
 import net.minecraft.text.Text;
 
-import static elc.florian.mcity.MCity.keyBinding;
+import static elc.florian.mcity.state.CameraState.keyBinding;
 
 public class Keybindings {
     public static void registerKeybindings() {
@@ -25,14 +27,14 @@ public class Keybindings {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (keyBinding.get(0).wasPressed()) {
                 assert client.player != null;
-                MCity.detached = !MCity.detached;
+                CameraState.detached = !CameraState.detached;
 
                 double x = client.player.getX();
                 double y = client.player.getY();
                 double z = client.player.getZ();
 
                 Vec3d playerPos = new Vec3d(x, y + 100, z);
-                MCity.cam.setPos(playerPos);
+                CameraState.cam.setPos(playerPos);
 
                 client.setScreen(new EditingGUI(Text.of("hi")));
             }

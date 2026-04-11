@@ -1,4 +1,6 @@
 package elc.florian.mcity.client;
+import elc.florian.mcity.state.Tools;
+
 
 import elc.florian.mcity.MCity;
 import elc.florian.mcity.structure.PlacedStructure;
@@ -64,7 +66,7 @@ public class BuildingPlacer {
                 default -> false;
             };
             if (s.kind.isRoad()) ZoneRegistry.cleanupOrphaned();
-            MCity.selectedStructure = ok ? StructureRegistry.all().get(StructureRegistry.all().size() - 1) : null;
+            Tools.selectedStructure = ok ? StructureRegistry.all().get(StructureRegistry.all().size() - 1) : null;
             return ok;
         }
 
@@ -73,7 +75,7 @@ public class BuildingPlacer {
         StructureRegistry.remove(s);
 
         boolean ok = replaceBuilding(s.kind, newClickedPos, rotation);
-        MCity.selectedStructure = ok ? StructureRegistry.all().get(StructureRegistry.all().size() - 1) : null;
+        Tools.selectedStructure = ok ? StructureRegistry.all().get(StructureRegistry.all().size() - 1) : null;
         return ok;
     }
 
@@ -87,7 +89,7 @@ public class BuildingPlacer {
         StructureRegistry.remove(s);
 
         boolean ok = replaceBuilding(s.kind, clicked, newRotation);
-        MCity.selectedStructure = ok ? StructureRegistry.all().get(StructureRegistry.all().size() - 1) : null;
+        Tools.selectedStructure = ok ? StructureRegistry.all().get(StructureRegistry.all().size() - 1) : null;
         return ok;
     }
 

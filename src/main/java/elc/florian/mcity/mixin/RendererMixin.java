@@ -1,4 +1,7 @@
 package elc.florian.mcity.mixin;
+import elc.florian.mcity.state.InputState;
+import elc.florian.mcity.state.CameraState;
+
 
 import elc.florian.mcity.MCity;
 import elc.florian.mcity.client.CustomRayCast;
@@ -20,8 +23,8 @@ public class RendererMixin {
     )
     private void replaceRaycast(ObjectAllocator allocator, RenderTickCounter tickCounter, boolean renderBlockOutline,
                                 Camera camera, GameRenderer gameRenderer, Matrix4f positionMatrix, Matrix4f projectionMatrix, CallbackInfo ci) {
-        if (MCity.detached) {
-            MinecraftClient.getInstance().crosshairTarget = CustomRayCast.throwRay((int) MCity.mouseX, (int) MCity.mouseY);
+        if (CameraState.detached) {
+            MinecraftClient.getInstance().crosshairTarget = CustomRayCast.throwRay((int) InputState.mouseX, (int) InputState.mouseY);
         }
     }
 }

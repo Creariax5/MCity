@@ -1,4 +1,8 @@
 package elc.florian.mcity.mixin;
+import elc.florian.mcity.state.Tools;
+import elc.florian.mcity.state.Simulation;
+import elc.florian.mcity.state.CameraState;
+
 
 import elc.florian.mcity.MCity;
 import elc.florian.mcity.client.ToolbarHelper;
@@ -17,7 +21,7 @@ public abstract class RemoveHud {
 
     @Inject(at=@At("HEAD"), method = "render", cancellable = true)
     public void render(DrawContext drawContext, RenderTickCounter renderTickCounter, CallbackInfo info) {
-        if (MCity.detached) {
+        if (CameraState.detached) {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client != null) {
                 int width = client.getWindow().getScaledWidth();
@@ -34,7 +38,7 @@ public abstract class RemoveHud {
     }
 
     private void renderInfoBar(DrawContext dc, MinecraftClient client, int width, int height) {
-        MCity.tickSimulation();
+        Simulation.tick();
 
         int infoY = ToolbarHelper.getInfoBarY(height);
 
@@ -44,14 +48,14 @@ public abstract class RemoveHud {
         int textY = infoY + (ToolbarHelper.INFO_BAR_HEIGHT - 8) / 2;
 
         // Date
-        dc.drawText(client.textRenderer, MCity.getDateString(), 5, textY, 0xFFDDDDDD, true);
+        dc.drawText(client.textRenderer, Simulation.getDateString(), 5, textY, 0xFFDDDDDD, true);
 
         // Boutons vitesse
         int speedX = 80;
         int speedBtnY = infoY + (ToolbarHelper.INFO_BAR_HEIGHT - ToolbarHelper.SPEED_BTN_SIZE) / 2;
 
         // Pause
-        int pauseColor = MCity.paused ? 0xFFFF6666 : 0xFF888888;
+        int pauseColor = Simulation.paused ? 0xFFFF6666 : 0xFF888888;
         dc.fill(speedX, speedBtnY, speedX + ToolbarHelper.SPEED_BTN_SIZE, speedBtnY + ToolbarHelper.SPEED_BTN_SIZE, pauseColor);
         int pauseTextX = speedX + (ToolbarHelper.SPEED_BTN_SIZE - client.textRenderer.getWidth("||")) / 2;
         dc.drawText(client.textRenderer, "||", pauseTextX, speedBtnY + 3, 0xFFFFFFFF, true);
@@ -60,7 +64,7 @@ public abstract class RemoveHud {
         String[] speedLabels = {">", ">>", ">>>"};
         for (int s = 0; s < 3; s++) {
             int sBtnX = speedX + ToolbarHelper.SPEED_BTN_SIZE + 3 + s * (ToolbarHelper.SPEED_BTN_SIZE + 2);
-            boolean active = !MCity.paused && MCity.gameSpeed == (s + 1);
+            boolean active = !Simulation.paused && Simulation.gameSpeed == (s + 1);
             dc.fill(sBtnX, speedBtnY, sBtnX + ToolbarHelper.SPEED_BTN_SIZE, speedBtnY + ToolbarHelper.SPEED_BTN_SIZE, active ? 0xFF66CC66 : 0xFF555555);
             int sTextW = client.textRenderer.getWidth(speedLabels[s]);
             dc.drawText(client.textRenderer, speedLabels[s], sBtnX + (ToolbarHelper.SPEED_BTN_SIZE - sTextW) / 2, speedBtnY + 3, 0xFFFFFFFF, true);
@@ -70,7 +74,7 @@ public abstract class RemoveHud {
         int demandStartX = speedX + ToolbarHelper.SPEED_BTN_SIZE + 3 + 3 * (ToolbarHelper.SPEED_BTN_SIZE + 2) + 15;
         int demandBarY = infoY + (ToolbarHelper.INFO_BAR_HEIGHT - ToolbarHelper.DEMAND_BAR_HEIGHT) / 2;
         String[] demandLabels = {"R", "C", "I"};
-        int[] demandValues = {MCity.demandResidential, MCity.demandCommercial, MCity.demandIndustrial};
+        int[] demandValues = {Simulation.demandResidential, Simulation.demandCommercial, Simulation.demandIndustrial};
         int[] demandColors = {0xFF44AA44, 0xFF4488DD, 0xFFDDAA44};
 
         for (int d = 0; d < 3; d++) {
@@ -86,24 +90,24 @@ public abstract class RemoveHud {
         int rightX = width - 5;
 
         // Argent
-        String moneyStr = MCity.getMoneyString();
+        String moneyStr = Simulation.getMoneyString();
         rightX -= client.textRenderer.getWidth(moneyStr);
         dc.drawText(client.textRenderer, moneyStr, rightX, textY, 0xFFFFDD44, true);
 
         rightX -= 10;
 
         // Population
-        String popStr = MCity.getPopulationString();
+        String popStr = Simulation.getPopulationString();
         rightX -= client.textRenderer.getWidth(popStr);
         dc.drawText(client.textRenderer, popStr, rightX, textY, 0xFFCCCCCC, true);
 
         rightX -= 10;
 
         // Bonheur
-        String happyStr = MCity.getHappinessEmoji() + " " + MCity.happiness + "%";
+        String happyStr = Simulation.getHappinessEmoji() + " " + Simulation.happiness + "%";
         int happyColor;
-        if (MCity.happiness >= 70) happyColor = 0xFF66CC66;
-        else if (MCity.happiness >= 40) happyColor = 0xFFDDAA44;
+        if (Simulation.happiness >= 70) happyColor = 0xFF66CC66;
+        else if (Simulation.happiness >= 40) happyColor = 0xFFDDAA44;
         else happyColor = 0xFFFF6666;
         rightX -= client.textRenderer.getWidth(happyStr);
         dc.drawText(client.textRenderer, happyStr, rightX, textY, happyColor, true);
@@ -114,44 +118,42 @@ public abstract class RemoveHud {
         int startX = ToolbarHelper.getToolbarStartX(width);
         int buttonY = ToolbarHelper.getButtonY(height);
 
-        // Fond semi-transparent de la toolbar
-        int totalWidth = ToolbarHelper.TOOLS.length * ToolbarHelper.BUTTON_SIZE + (ToolbarHelper.TOOLS.length - 1) * ToolbarHelper.BUTTON_SPACING;
-        int bgX = startX - 6;
-        int bgW = totalWidth + 12;
-        dc.fill(bgX, toolbarY, bgX + bgW, toolbarY + ToolbarHelper.TOOLBAR_HEIGHT, 0xAA222222);
+        java.util.List<elc.florian.mcity.tools.Tool> all = elc.florian.mcity.tools.ToolRegistry.all();
+        int n = all.size();
 
-        for (int i = 0; i < ToolbarHelper.TOOLS.length; i++) {
+        int totalWidth = n * ToolbarHelper.BUTTON_SIZE + (n - 1) * ToolbarHelper.BUTTON_SPACING;
+        dc.fill(startX - 6, toolbarY, startX + totalWidth + 6, toolbarY + ToolbarHelper.TOOLBAR_HEIGHT, 0xAA222222);
+
+        Tools.ToolType[] toolTypes = Tools.ToolType.values();
+        for (int i = 0; i < n; i++) {
             int btnX = startX + i * (ToolbarHelper.BUTTON_SIZE + ToolbarHelper.BUTTON_SPACING);
-            boolean selected = ToolbarHelper.TOOLS[i] == MCity.selectedTool;
+            boolean selected = toolTypes[i] == Tools.selectedTool;
 
-            // Bordure de sélection
             if (selected) {
                 dc.fill(btnX - 2, buttonY - 2, btnX + ToolbarHelper.BUTTON_SIZE + 2, buttonY + ToolbarHelper.BUTTON_SIZE + 2, 0xFFFFFFFF);
             }
-
-            // Fond du bouton
             dc.fill(btnX, buttonY, btnX + ToolbarHelper.BUTTON_SIZE, buttonY + ToolbarHelper.BUTTON_SIZE, 0xFF333333);
 
-            // Icône de l'item (centré dans le bouton, 16x16 est la taille standard d'un item)
             int iconX = btnX + (ToolbarHelper.BUTTON_SIZE - 16) / 2;
             int iconY = buttonY + (ToolbarHelper.BUTTON_SIZE - 16) / 2;
-            dc.drawItem(new ItemStack(ToolbarHelper.TOOL_ITEMS[i]), iconX, iconY);
+            dc.drawItem(new ItemStack(all.get(i).icon), iconX, iconY);
         }
     }
 
     private void renderFillModeToggle(DrawContext dc, MinecraftClient client, int width, int height) {
-        if (MCity.selectedTool != MCity.ToolType.AREA) return;
+        if (Tools.selectedTool != Tools.ToolType.AREA) return;
 
         int startX = ToolbarHelper.getToolbarStartX(width);
         int buttonY = ToolbarHelper.getButtonY(height);
-        int toolbarEnd = startX + ToolbarHelper.TOOLS.length * ToolbarHelper.BUTTON_SIZE + (ToolbarHelper.TOOLS.length - 1) * ToolbarHelper.BUTTON_SPACING;
+        int n = elc.florian.mcity.tools.ToolRegistry.all().size();
+        int toolbarEnd = startX + n * ToolbarHelper.BUTTON_SIZE + (n - 1) * ToolbarHelper.BUTTON_SPACING;
 
         int btnW = 60;
         int btnH = ToolbarHelper.BUTTON_SIZE;
         int btnX = toolbarEnd + 15;
 
-        String label = MCity.zoneFillMode ? "Remplir" : "Tile";
-        int color = MCity.zoneFillMode ? 0xFF66CC66 : 0xFF555555;
+        String label = Tools.zoneFillMode ? "Remplir" : "Tile";
+        int color = Tools.zoneFillMode ? 0xFF66CC66 : 0xFF555555;
 
         dc.fill(btnX, buttonY, btnX + btnW, buttonY + btnH, color);
         int tw = client.textRenderer.getWidth(label);
@@ -159,7 +161,7 @@ public abstract class RemoveHud {
     }
 
     private void renderActionPanel(DrawContext dc, MinecraftClient client, int width, int height) {
-        if (MCity.selectedStructure == null) return;
+        if (Tools.selectedStructure == null) return;
 
         int[] layout = ToolbarHelper.getActionPanelLayout(width, height);
         int panelX = layout[0], panelY = layout[1], panelW = layout[2], panelH = layout[3], nbButtons = layout[4];
@@ -168,13 +170,13 @@ public abstract class RemoveHud {
         dc.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xDD222222);
 
         // Nom de la structure au-dessus
-        String name = MCity.selectedStructure.kind.displayName;
-        if (MCity.moveMode) name += " (cliquez pour déplacer)";
+        String name = Tools.selectedStructure.kind.displayName;
+        if (Tools.moveMode) name += " (cliquez pour déplacer)";
         int nameW = client.textRenderer.getWidth(name);
         dc.drawText(client.textRenderer, name, panelX + (panelW - nameW) / 2, panelY - 10, 0xFFFFFFFF, true);
 
         int btnY = panelY + ToolbarHelper.ACTION_PANEL_PADDING;
-        boolean isLine = MCity.selectedStructure.kind.isLine;
+        boolean isLine = Tools.selectedStructure.kind.isLine;
         String[] labels = isLine ? new String[]{"Deplacer", "Supprimer"} : new String[]{"Deplacer", "Tourner", "Supprimer"};
         int[] colors = isLine ? new int[]{0xFF4488DD, 0xFFDD4444} : new int[]{0xFF4488DD, 0xFFDDAA44, 0xFFDD4444};
 
@@ -187,26 +189,26 @@ public abstract class RemoveHud {
     }
 
     private void renderPanel(DrawContext dc, MinecraftClient client, int width, int height) {
-        if (!MCity.panelOpen || MCity.selectedTool == null) return;
+        if (!Tools.panelOpen || Tools.selectedTool == null) return;
 
-        String[] names = ToolbarHelper.getActiveNames();
-        int[] colors = ToolbarHelper.getActiveColors();
+        java.util.List<elc.florian.mcity.tools.SubType> subs = ToolbarHelper.getActiveSubTypes();
+        if (subs == null || subs.isEmpty()) return;
+
         int selectedIndex = ToolbarHelper.getActiveSelectedIndex();
-        if (names == null) return;
-
         int startX = ToolbarHelper.getToolbarStartX(width);
         int buttonY = ToolbarHelper.getButtonY(height);
 
-        int toolIndex = MCity.selectedTool.ordinal();
+        int toolIndex = Tools.selectedTool.ordinal();
         int btnX = startX + toolIndex * (ToolbarHelper.BUTTON_SIZE + ToolbarHelper.BUTTON_SPACING);
         int panelW = ToolbarHelper.PANEL_ITEM_WIDTH;
         int panelX = btnX - (panelW - ToolbarHelper.BUTTON_SIZE) / 2;
-        int panelH = names.length * (ToolbarHelper.PANEL_ITEM_HEIGHT + ToolbarHelper.PANEL_PADDING) + ToolbarHelper.PANEL_PADDING;
+        int panelH = subs.size() * (ToolbarHelper.PANEL_ITEM_HEIGHT + ToolbarHelper.PANEL_PADDING) + ToolbarHelper.PANEL_PADDING;
         int panelY = buttonY - panelH - 5;
 
         dc.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xDD222222);
 
-        for (int j = 0; j < names.length; j++) {
+        for (int j = 0; j < subs.size(); j++) {
+            elc.florian.mcity.tools.SubType sub = subs.get(j);
             int itemX = panelX + ToolbarHelper.PANEL_PADDING;
             int itemY = panelY + ToolbarHelper.PANEL_PADDING + j * (ToolbarHelper.PANEL_ITEM_HEIGHT + ToolbarHelper.PANEL_PADDING);
             int itemW = panelW - 2 * ToolbarHelper.PANEL_PADDING;
@@ -214,13 +216,13 @@ public abstract class RemoveHud {
             if (j == selectedIndex) {
                 dc.fill(itemX - 1, itemY - 1, itemX + itemW + 1, itemY + ToolbarHelper.PANEL_ITEM_HEIGHT + 1, 0xFFFFFFFF);
             }
+            dc.fill(itemX, itemY, itemX + itemW, itemY + ToolbarHelper.PANEL_ITEM_HEIGHT, sub.color);
 
-            dc.fill(itemX, itemY, itemX + itemW, itemY + ToolbarHelper.PANEL_ITEM_HEIGHT, colors[j]);
-
-            int tw = client.textRenderer.getWidth(names[j]);
-            int tx = itemX + (itemW - tw) / 2;
-            int ty = itemY + (ToolbarHelper.PANEL_ITEM_HEIGHT - 8) / 2;
-            dc.drawText(client.textRenderer, names[j], tx, ty, 0xFFFFFFFF, true);
+            int tw = client.textRenderer.getWidth(sub.name);
+            dc.drawText(client.textRenderer, sub.name,
+                    itemX + (itemW - tw) / 2,
+                    itemY + (ToolbarHelper.PANEL_ITEM_HEIGHT - 8) / 2,
+                    0xFFFFFFFF, true);
         }
     }
 }
